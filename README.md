@@ -46,7 +46,7 @@
 | settoken <token>                            | 设定水鱼网站jwt_token, 支持多用户                 |
 | settoken <qq=token>                            | [SUPERADMIN]修改水鱼网站jwt_token, 可以改别人的 eg: 23333333=ajhfadfAFihncauetaUDHOA                |
 | 游玩记录                             | 获取自己的游玩记录, 必须是玩过的歌才能一键AP                |
-| 一键AP/1keyap <歌曲ID>-<rem/mst/exp/adv/bas>                            | [SUPERADMIN]一键在水鱼网站上AP/FDX, 有概率AP+/FDX+                |
+| 一键AP/1keyap[@someone] <歌曲ID>-<rem/mst/exp/adv/bas>                            | 一键在水鱼网站上AP/FDX, 有概率AP+/FDX+                |
 
 ## 更新说明
 
