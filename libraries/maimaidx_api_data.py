@@ -6,8 +6,7 @@ import aiohttp
 from .. import log, token
 
 player_error = '''未找到此玩家，请确保此玩家的用户名和查分器中的用户名相同。
-如未绑定，请前往查分器官网进行绑定
-https://www.diving-fish.com/maimaidx/prober/'''
+如未绑定，请前往查分器官网进行绑定'''
 maimaiapi = 'https://www.diving-fish.com/api/maimaidxprober'
 ALIAS = {
     'all': 'MaimaiDXAlias',
@@ -35,7 +34,8 @@ async def get_player_data(project: str, payload: dict) -> Union[dict, str]:
     else:
         return '项目错误'
     try:
-        async with aiohttp.request('POST', f'{maimaiapi}/query/{p}', json=payload, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+        async with aiohttp.request('POST', f'{maimaiapi}/query/{p}', json=payload,
+                                   timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status == 400:
                 data = player_error
             elif resp.status == 403:
@@ -52,7 +52,8 @@ async def get_player_data(project: str, payload: dict) -> Union[dict, str]:
 
 async def get_dev_player_data(payload: dict) -> Union[dict, str]:
     try:
-        async with aiohttp.request('GET', f'{maimaiapi}/dev/player/records', headers={'developer-token': token}, params=payload) as resp:
+        async with aiohttp.request('GET', f'{maimaiapi}/dev/player/records', headers={'developer-token': token},
+                                   params=payload) as resp:
             if resp.status == 400:
                 data = player_error
             elif resp.status == 403:
@@ -72,7 +73,8 @@ async def get_rating_ranking_data() -> Union[dict, str]:
     获取排名，获取失败时返回字符串
     """
     try:
-        async with aiohttp.request('GET', f'{maimaiapi}/rating_ranking', timeout=aiohttp.ClientTimeout(total=30)) as resp:
+        async with aiohttp.request('GET', f'{maimaiapi}/rating_ranking',
+                                   timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status != 200:
                 data = '未知错误，请联系BOT管理员'
             else:
@@ -93,7 +95,8 @@ async def get_music_alias(api: str, params: dict = None) -> Union[
     - `end`: 已结束的别名申请
     """
     try:
-        async with aiohttp.request('GET', f'https://api.yuzuai.xyz/maimaidx/{ALIAS[api]}', params=params, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+        async with aiohttp.request('GET', f'https://api.yuzuai.xyz/maimaidx/{ALIAS[api]}', params=params,
+                                   timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status == 400:
                 data = '参数输入错误'
             elif resp.status == 500:
@@ -108,7 +111,8 @@ async def get_music_alias(api: str, params: dict = None) -> Union[
 
 async def get_xray_alias() -> Union[list, str]:
     try:
-        async with aiohttp.request('GET', f'https://download.fanyu.site/maimai/alias.json', timeout=aiohttp.ClientTimeout(total=30)) as resp:
+        async with aiohttp.request('GET', f'https://download.fanyu.site/maimai/alias.json',
+                                   timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status != 200:
                 data = '别名服务器错误，请联系Xray Bot开发者'
             else:
@@ -126,7 +130,8 @@ async def post_music_alias(api: str, params: dict = None) -> Union[
     - `agree`: 同意别名
     """
     try:
-        async with aiohttp.request('POST', f'https://api.yuzuai.xyz/maimaidx/{ALIAS[api]}', params=params, timeout=aiohttp.ClientTimeout(total=30)) as resp:
+        async with aiohttp.request('POST', f'https://api.yuzuai.xyz/maimaidx/{ALIAS[api]}', params=params,
+                                   timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status == 400:
                 data = '参数输入错误'
             elif resp.status == 500:
