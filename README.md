@@ -1,6 +1,6 @@
 # iiDX
 ## 现在正在运营的 iiDX2023 是盗版插件, 请大家不要使用(KohaD语气)
-
+## （扭曲）（尖叫）（爬行）
 
 移植自 xybot 及 [mai-bot](https://github.com/Diving-Fish/mai-bot) 开源项目，基于 [HoshinoBotV2](https://github.com/Ice-Cirno/HoshinoBot) 和 [nonebot2](https://v2.nonebot.dev) 的街机音游 **舞萌DX** 的查询插件
 
@@ -13,11 +13,14 @@
 **2023-06-16**
 1. 删除大量(我)用不到的功能
 2. 添加各种抽象功能
-   查询玩家/BOT天梯榜时增加彩蛋
-   添加B40兼容, 喜欢B40的有福了
-   一键在水鱼网站上AP**需要自己抓登录的token**
+   1. 查询玩家/BOT天梯榜时增加彩蛋
+   2. 添加B40兼容, 喜欢B40的有福了, <s>整天bbb你是能16000还是咋的</s>
+   3. 一键在水鱼网站上AP**需要自己抓登录的token**
+   4. 查用户ASTELL或EmoBot的时候ra为23333, b50全制霸
 3. 没有玩过特定歌曲会返回抽象内容
-4. 替换所有封面为Xray抽象画
+4. 替换所有封面为Xray抽象画, 你需要下载资源文件.
+   1. [节点1-百度网盘](https://pan.baidu.com/s/1Mboy1Al_8cuIKc1k4NLQkw?pwd=p96w)
+   2. [节点2-Mega网盘](https://mega.nz/file/tQQVUboI#1PTbgE7me4hBrYohtj2pFUizWG3PC25xXFJ4Vup2OVM)
 5. 可以在static/config.json里切换别名升级通道了[OFFICIAL/OFFLINE/XRAY]
 
 
@@ -31,16 +34,17 @@
 | 添加抽象别名 <歌曲ID>-<歌曲别名>                             | [SUPERADMIN]直接添加歌曲别名, 申请个毛线, 说的和能过一样|
 | 删除抽象别名 <歌曲ID>-<歌曲别名>                             | [SUPERADMIN]直接删除歌曲别名|
 | 更改歌曲名称 <歌曲ID>-<歌曲名>                             | [SUPERADMIN]直接更改歌曲名|
+| 添加歌曲/添加最新最热 <歌曲ID>-<歌曲名>                             | [SUPERADMIN]直接添加一首歌, 再也不怕更新的时候机器人因为找不到新歌寄了|
 | 开启/关闭抽象猜歌                                     | 开关猜歌功能                        |
 | info<@> <id/别称/曲名>                            | 查询单曲成绩                        |
 | global[绿黄红紫白] <id/别称/曲名>                        | 查询乐曲游玩总览，不加难度默认为紫谱         |
-| ib50/ib40 <游戏名/@someone>                                      | 查询b50, 兼容老的B40指令                         |
-| 抽象猜歌/猜歌抽象/曹冲称象                                             | 猜猜猜整天就知道猜, 真的好想骂人               |
+| ib50/ib40 <游戏名/@someone>                                      | 查询b50, 兼容老的B40指令, BOT名是ASTELL, 可以改成自己的名字                         |
+| 抽象猜歌/猜歌抽象/曹冲称象                                             | 猜猜猜整天就知道猜, 真的好想骂人啊啊啊啊啊               |
 | <牌子名称>进度 <名字>                                  | 查看牌子完成进度                      |
 | <等级> 分数列表 <名字>                                 | 查看等级评价列表                      |
 | 我/你/他/她/祂有多菜 <页数>/<名字>                            | 查看水鱼网站的用户ra排行, 对于BOT来说是抽象内容                 |
 | settoken <token>                            | 设定水鱼网站jwt_token, 支持多用户                 |
-| settoken <qq=token>                            | [SUPERADMIN]修改水鱼网站jwt_token, eg: 23333333=ajhfadfAFihncauetaUDHOA                |
+| settoken <qq=token>                            | [SUPERADMIN]修改水鱼网站jwt_token, 可以改别人的 eg: 23333333=ajhfadfAFihncauetaUDHOA                |
 | 游玩记录                             | 获取自己的游玩记录, 必须是玩过的歌才能一键AP                |
 | 一键AP/1keyap <歌曲ID>-<rem/mst/exp/adv/bas>                            | [SUPERADMIN]一键在水鱼网站上AP/FDX, 有概率AP+/FDX+                |
 
@@ -49,7 +53,8 @@
 **2023-06-16**
 
 1. 因原作者**YuzuChaN**在项目中曾使用我提供的别名数据, 而不提供任何说明/致谢感到非常失望.
-2. 基于原作者的态度考量, 我没有必要继续在Readme中提供原项目地址或遵循任何原项目指定协议.
+2. 基于原作者的态度考量, 我没有必要继续在本分支的Readme中提供原项目地址或遵循任何原项目指定协议.
+3. 囿于开源精神, 主分支保留正常的信息
 
 **2023-06-09**
 
@@ -207,3 +212,5 @@
 
 ## 别人传一行代码算Contribute, 我又是写别名库合并又是提供转换好的alias都没见到有半句谢谢
 ## 小刀笔筒
+不认真看协议内容的人似乎不少, 把别人发在issue里的内容直接拿来用也不加致谢
+我觉得一般用户就算了，你一个开发者你自己都不遵守MIT协议我凭什么遵守?
