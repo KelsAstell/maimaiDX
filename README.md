@@ -4,11 +4,11 @@
 
 移植自 xybot 及 [mai-bot](https://github.com/Diving-Fish/mai-bot) 开源项目，基于 [HoshinoBotV2](https://github.com/Ice-Cirno/HoshinoBot) 和 [nonebot2](https://v2.nonebot.dev) 的街机音游 **舞萌DX** 的查询插件
 
-## 别人传一行代码算Contribute, 我又是写别名库合并又是提供转换好的alias都没见到有半句谢谢
+
 分支项目地址：https://github.com/KelsAstell/maimaiDX
 
-## iidx分支特性, 看清楚是iidx分支, 烦死了真的造孽
-**噢, 不该骂人的, 我的美好品德都随着原作者消逝了**
+## iidx分支特性, 看清楚是iidx分支
+**我的美好品德都随着原作者消逝了**
 
 **2023-06-16**
 1. 删除大量(我)用不到的功能
@@ -204,3 +204,6 @@
 ## License
 
 ？不存在的, 你用我别名库的时候你按照MIT了吗？致谢呢, 脸这么大？
+
+## 别人传一行代码算Contribute, 我又是写别名库合并又是提供转换好的alias都没见到有半句谢谢
+## 小刀笔筒
