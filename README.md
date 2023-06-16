@@ -18,6 +18,7 @@
    一键在水鱼网站上AP**需要自己抓登录的token**
 3. 没有玩过特定歌曲会返回抽象内容
 4. 替换所有封面为Xray抽象画
+5. 可以在static/config.json里切换别名升级通道了[OFFICIAL/OFFLINE/XRAY]
 
 
 ## 指令
