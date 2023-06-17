@@ -204,7 +204,7 @@ async def maiinfo(bot: NoneBot, ev: CQEvent):
         if i.type == 'at' and i.data['qq'] != 'all':
             qqid = int(i.data['qq'])
     if not args:
-        await bot.finish(ev, '你要查啥?' if randint(1,10)%2 else '查不了空气', at_sender=True)
+        await bot.finish(ev, '你要查啥?' if random.randint(1,10)%2 else '查不了空气', at_sender=True)
     payload = {'qq': qqid}
     if mai.total_list.by_id(args):
         id = args
