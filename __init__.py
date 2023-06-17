@@ -9,10 +9,5 @@ log = new_logger('maimaiDX')
 BOTNAME = NICKNAME if isinstance(NICKNAME, str) else list(NICKNAME)[0]
 static = os.path.join(os.path.dirname(__file__), 'static')
 
-arcades_json = os.path.join(static, 'arcades.json')
-if not os.path.exists(arcades_json):
-    raise FileNotFoundError
-arcades: List[Dict] = json.load(open(arcades_json, 'r', encoding='utf-8'))
-
 token = json.load(open(os.path.join(static, 'config.json'), 'r', encoding='utf-8'))['token']
 update_channel = json.load(open(os.path.join(static, 'config.json'), 'r', encoding='utf-8'))['update_channel']
