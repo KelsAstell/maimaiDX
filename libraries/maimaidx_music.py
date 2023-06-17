@@ -320,6 +320,7 @@ async def get_music_alias_list() -> AliasList:
     total_alias_list = AliasList(data)
     for _ in range(len(total_alias_list)):
         total_alias_list[_] = Alias(ID=total_alias_list[_], Name=data[total_alias_list[_]]['Name'], Alias=data[total_alias_list[_]]['Alias'])
+
     return total_alias_list
 
 
