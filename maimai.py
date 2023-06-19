@@ -24,6 +24,7 @@ from .libraries.one_key_ap import *
 
 SV_HELP = '请使用 iiDX? 查看帮助'
 sv = Service('iiDX', manage_priv=priv.ADMIN, enable_on_default=False, help_=SV_HELP)
+sv_help = os.path.join(static, 'maimaidx_help.png')
 
 
 def song_level(ds1: float, ds2: float, stats1: str = None, stats2: str = None) -> list:
@@ -56,21 +57,33 @@ async def get_music(event: CQEvent):
     mai.guess()
 
 
+@sv.on_prefix(['嗦梨进度', '嗦🍐进度', '🍐进度'])
+async def let_me_solips(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    id = '11353'
+    for i in ev.message:
+        if i.type == 'at' and i.data['qq'] != 'all':
+            qqid = int(i.data['qq'])
+    payload = {'qq': qqid}
+    msg = await solips_play_data(payload, id)
+    await bot.send(ev, msg, at_sender=True)
+
+
 @sv.on_prefix(['更新token', 'settoken', '设置token'])
 async def upd_token(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
     args: str = ev.message.extract_plain_text().strip()
-    args = args.split("=")
-    if len(args) > 1:
+    args_list = args.split("=")
+    if len(args_list) > 1:
         if not priv.check_priv(ev, priv.SUPERUSER):
             await bot.send(ev, '只有管理员能修改他人Token', at_sender=True)
             return None
-        await bot.send(ev, write_token_to_file(args[0],args[1]), at_sender=True)
+        await bot.send(ev, write_token_to_file(args_list[0],args_list[1]), at_sender=True)
         return None
     for i in ev.message:
         if i.type == 'at' and i.data['qq'] != 'all':
             qqid = int(i.data['qq'])
-    await bot.send(ev, write_token_to_file(qqid,args[0]), at_sender=True)
+    await bot.send(ev, write_token_to_file(qqid,args_list[0]), at_sender=True)
     return None
 
 
@@ -87,13 +100,13 @@ async def get_records(bot: NoneBot, ev: CQEvent):
 async def onekey_ap(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
     args: str = ev.message.extract_plain_text().strip()
-    args = args.split("-")
+    args_list = args.split("-")
     dic = {"master":3,"mst":3,"advanced":1,"adv":1,"basic":0,"bas":0,"exp":2,"expert":2,"remaster":4,"rem":4}
     for i in ev.message:
         if i.type == 'at' and i.data['qq'] != 'all':
             qqid = int(i.data['qq'])
-    if os.path.exists(file := os.path.join(static, 'data', f'{qqid}.json')):
-        await bot.send(ev, update_records_by_id(qqid, int(args[0]), dic[args[1]]), at_sender=True)
+    if os.path.exists(os.path.join(static, 'data', f'{qqid}.json')):
+        await bot.send(ev, update_records_by_id(qqid, int(args_list[0]), dic[args_list[1]]), at_sender=True)
     
 
 @sv.on_fullmatch(['iiDX?', 'iidx?'])
@@ -199,6 +212,7 @@ async def best_50(bot: NoneBot, ev: CQEvent):
 @sv.on_prefix(['info', 'INFO'])
 async def maiinfo(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    id = '1'
     args: str = ev.message.extract_plain_text().strip()
     for i in ev.message:
         if i.type == 'at' and i.data['qq'] != 'all':
@@ -372,6 +386,8 @@ async def give_answer(bot: NoneBot, ev: CQEvent):
 
 @sv.on_fullmatch('抽象猜歌','猜抽象歌','曹冲称象','猜歌抽象')
 async def guess_music(bot: NoneBot, ev: CQEvent):
+    if not priv.check_priv(ev, priv.SUPERUSER):
+        return None
     gid = str(ev.group_id)
     if ev.group_id not in guess.config['enable']:
         await bot.finish(ev, '该群已关闭猜歌功能，开启请输入 开启抽象猜歌')

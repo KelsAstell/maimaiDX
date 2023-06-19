@@ -106,6 +106,36 @@ async def draw_music_info(music: Music) -> MessageSegment:
 
     return msg
 
+
+async def solips_play_data(payload: dict, songs: str) -> Union[str, MessageSegment, None]:
+    payload['version'] = list(set(version for version in plate_to_version.values()))
+    data = await get_player_data('plate', payload)
+    if isinstance(data, str):
+        return data
+
+    player_data: list[dict[str, Union[float, str, int]]] = []
+    for i in data['verlist']:
+        if i['id'] == int(songs):
+            player_data.append(i)
+    if not player_data:
+        return '你还没有嗦🍐'
+    total_ra = 0
+    msg = "嗦梨统计:\n"
+    player_data.sort(key=lambda a: a['level_index'])
+    music = mai.total_list.by_id(songs)
+    lv_dict = {0: "Basic", 1: "Advanced", 2: "Expert", 3: "Master", 4: "Re:Master"}
+    for _data in player_data:
+        ds: float = music.ds[_data['level_index']]
+        lv: int = _data['level_index']
+        ra, rate = computeRa(ds, _data['achievements'], israte=True)
+        msg += f"{lv_dict[lv]}难度{rate.replace('p','+')}, 恰了{ra}分.\n"
+        if ra >= 321:
+            msg += "我超, 嗦梨大神!\n"
+        total_ra += ra
+
+    return msg + f"你的嗦梨总共毛到了{total_ra}分."
+
+
 async def music_play_data(payload: dict, songs: str) -> Union[str, MessageSegment, None]:
     payload['version'] = list(set(version for version in plate_to_version.values()))
     data = await get_player_data('plate', payload)
@@ -163,7 +193,7 @@ async def music_play_data(payload: dict, songs: str) -> Union[str, MessageSegmen
 
         p, s = f'{_data["achievements"]:.4f}'.split('.')
         r = tb.get_box(p, 36)
-        tb.draw(90, 545 + y * lv, 30, ds, anchor='mm')
+        tb.draw(90, 545 + y * lv, 30, str(ds), anchor='mm')
         tb.draw(200, 567 + y * lv, 36, p, TEXT_COLOR[lv], 'ld')
         tb.draw(200 + r[2], 565 + y * lv, 30, f'.{s}%', TEXT_COLOR[lv], 'ld')
         tb.draw(790, 545 + y * lv, 30, ra, TEXT_COLOR[lv], 'mm')
