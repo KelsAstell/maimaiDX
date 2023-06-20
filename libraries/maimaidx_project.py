@@ -797,3 +797,26 @@ async def rating_ranking_data(name: Optional[str], page: Optional[int]) -> Union
         data = MessageSegment.image(image_to_base64(text_to_image(msg.strip())))
 
     return data
+
+
+async def rating_pk(name1: Optional[str], name2: Optional[str]) -> Union[MessageSegment, str]:
+    rank_data = await get_rating_ranking_data()
+
+    if isinstance(rank_data, str):
+        return rank_data
+
+    sorted_rank_data = sorted(rank_data, key=lambda r: r['ra'], reverse=True)
+
+    if name1 in [r['username'].lower() for r in sorted_rank_data] and name2 in [r['username'].lower() for r in sorted_rank_data]:
+        rank_index1 = [r['username'].lower() for r in sorted_rank_data].index(name1) + 1
+        rank_index2 = [r['username'].lower() for r in sorted_rank_data].index(name2) + 1
+        nickname1 = sorted_rank_data[rank_index1 - 1]['username']
+        nickname2 = sorted_rank_data[rank_index2 - 1]['username']
+        data = f'{nickname1}在排行第{rank_index1}位.\n{nickname2}在排行第{rank_index2}位.\n让我们恭喜'
+        if not rank_index1 == rank_index2:
+            data += f'{nickname1}' if rank_index1 < rank_index2 else f'{nickname2}'
+        else:
+            data += '两位选手打成平手, 你们就是传说中的55开?'
+    else:
+        data = '未找到该玩家'
+    return data

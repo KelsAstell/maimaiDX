@@ -164,6 +164,7 @@ async def what_song(bot: NoneBot, ev: CQEvent):
     music = mai.total_list.by_id(str(data[0].ID))
     await bot.send(ev, '您要找的是不是：' + (await draw_music_info(music)), at_sender=True)
 
+
 @sv.on_suffix(['有什么抽象别称', '有什么抽象别名'])
 async def how_song(bot: NoneBot, ev: CQEvent):
     name: str = ev.message.extract_plain_text().strip().lower()
@@ -209,6 +210,7 @@ async def best_50(bot: NoneBot, ev: CQEvent):
     payload['b50'] = True
     await bot.send(ev, await generate(payload), at_sender=True)
 
+
 @sv.on_prefix(['info', 'INFO'])
 async def maiinfo(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
@@ -241,6 +243,7 @@ async def maiinfo(bot: NoneBot, ev: CQEvent):
         pic = await music_play_data(payload, id)
 
     await bot.send(ev, pic, at_sender=True)
+
 
 @sv.on_prefix(['global'])
 async def globinfo(bot: NoneBot, ev: CQEvent):
@@ -337,9 +340,9 @@ async def level_achievement_list(bot: NoneBot, ev: CQEvent):
     data = await level_achievement_list_data(payload, match, nickname)
     await bot.send(ev, data, at_sender=True)
 
+
 @sv.on_prefix(['我有多菜','他有多菜','她有多菜','祂有多菜'])
 async def rating_ranking(bot: NoneBot, ev: CQEvent):
-    name = 'astell'
     args: str = ev.message.extract_plain_text().strip()
     if args:
         name = args.lower()
@@ -353,6 +356,19 @@ async def rating_ranking(bot: NoneBot, ev: CQEvent):
         name = args.lower()
     
     data = await rating_ranking_data(name, page)
+    await bot.send(ev, data, at_sender=True)
+
+
+@sv.on_prefix(['rapk', 'ra比较'])
+async def rating_compare(bot: NoneBot, ev: CQEvent):
+    args: str = ev.message.extract_plain_text().strip()
+    usernames = args.split()
+    if len(usernames) == 2 and not usernames[0] == usernames[1]:
+        name1 = usernames[0].lower()
+        name2 = usernames[1].lower()
+    else:
+        return None
+    data = await rating_pk(name1, name2)
     await bot.send(ev, data, at_sender=True)
 
 
