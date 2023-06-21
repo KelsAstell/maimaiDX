@@ -758,6 +758,16 @@ async def level_achievement_list_data(payload: dict, match: Match, nickname: Opt
 
     return MessageSegment.image(image_to_base64(text_to_image(msg.strip())))
 
+
+def name_linked(qqid:str):
+    with open(os.path.join(static, 'qq_name_list.json'), 'r', encoding='utf-8') as fp:
+        name_list = json.load(fp)
+    if str(qqid) in name_list:
+        return {"success": True, "username": name_list[str(qqid)]}
+    else:
+        return {"success": False}
+
+
 async def rating_ranking_data(name: Optional[str], page: Optional[int]) -> Union[MessageSegment, str]:
 
     rank_data = await get_rating_ranking_data()
@@ -771,20 +781,16 @@ async def rating_ranking_data(name: Optional[str], page: Optional[int]) -> Union
         if name in [r['username'].lower() for r in sorted_rank_data]:
             rank_index = [r['username'].lower() for r in sorted_rank_data].index(name) + 1
             nickname = sorted_rank_data[rank_index - 1]['username']
+            ra = nickname = sorted_rank_data[rank_index - 1]['ra']
             rank_percent = round(100-rank_index/len(rank_data)*100,2)
             data = ''
             if rank_percent >= 80:
                 data = '\n我超，乌蒙大神！'
-            if nickname == 'ASTELL':
-                nickname = '爷'
-                rank_index = 1
-                rank_percent = 100
-                data = '我超，我是乌蒙大神！'
-                data = data + f'\n截止至 {time.strftime("%Y年%m月%d日%H时%M分",time.localtime())}\n{nickname}在火猫网站未注册用户ra排行第{rank_index}\n超过了{rank_percent}%的玩家'
-                return data
-            data = data + f'截止至 {time.strftime("%Y年%m月%d日%H时%M分", time.localtime())}\n{nickname}在水鱼网站已注册用户ra排行第{rank_index}\n超过了{rank_percent}%的玩家'
+            data = data + f'截止至 {time.strftime("%Y年%m月%d日%H时%M分", time.localtime())}\n{nickname}的ra为{ra}\n在水鱼网站已注册用户ra排行第{rank_index}\n超过了{rank_percent}%的玩家'
+            return data
         else:
             data = '未找到该玩家'
+            return data
     else:
         user_num = len(sorted_rank_data)
         msg = f'截止至 {time.strftime("%Y年%m月%d日%H时%M分", time.localtime())}，水鱼网站已注册用户ra排行：\n'

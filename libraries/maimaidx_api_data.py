@@ -1,9 +1,11 @@
+import json
+import os
 import traceback
 from typing import Dict, List, Union
 
 import aiohttp
 
-from .. import log, token
+from .. import log, token, static
 
 player_error = '''未找到此玩家，请确保此玩家的用户名和查分器中的用户名相同。
 如未绑定，请前往查分器官网进行绑定'''
@@ -42,6 +44,13 @@ async def get_player_data(project: str, payload: dict) -> Union[dict, str]:
                 data = '该用户禁止了其他人获取数据。'
             elif resp.status == 200:
                 data = await resp.json()
+                if payload['qq'] and 'username' in data:
+                    with open(os.path.join(static, 'qq_name_list.json'), 'r', encoding='utf-8') as fp:
+                        name_list = json.load(fp)
+                    name_list[payload['qq']] = data['username']
+                    json_str = json.dumps(name_list, indent=4, ensure_ascii=False)
+                    with open(os.path.join(static, 'qq_name_list.json'), 'w', encoding='utf-8') as json_file:
+                        json_file.write(json_str)
             else:
                 data = '未知错误，请联系BOT管理员'
     except Exception as e:

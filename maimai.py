@@ -347,37 +347,71 @@ async def rating_ranking(bot: NoneBot, ev: CQEvent):
     if args:
         name = args.lower()
     else:
-        await bot.send(ev, '用法: 他有多菜 <用户名>', at_sender=True)
+        query = name_linked(str(ev.user_id))
+        if query["success"]:
+            data = await rating_ranking_data(query["username"].lower(), 1)
+            await bot.send(ev, data, at_sender=True)
+            return None
         return None
     page = 1
     if args.isdigit():
         page = int(args)
     else:
         name = args.lower()
-    
     data = await rating_ranking_data(name, page)
     await bot.send(ev, data, at_sender=True)
 
 
-@sv.on_prefix(['rapk', 'ra比较'])
+@sv.on_prefix(['rapk', 'ra比较', '仇人对战'])
 async def rating_compare(bot: NoneBot, ev: CQEvent):
+    qqid1 = ev.user_id
+    qqid2 = ''
+    for i in ev.message:
+        if i.type == 'at' and i.data['qq'] != 'all':
+            qqid2 = int(i.data['qq'])
     args: str = ev.message.extract_plain_text().strip()
     usernames = args.split()
     if len(usernames) == 2 and not usernames[0] == usernames[1]:
         name1 = usernames[0].lower()
         name2 = usernames[1].lower()
+        data = await rating_pk(name1, name2)
+        await bot.send(ev, data, at_sender=True)
+    elif len(usernames) == 1:
+        if not qqid2:
+            query = name_linked(str(ev.user_id))
+            if query["success"]:
+                name1 = usernames[0].lower()
+                name2 = query["username"].lower()
+                data = await rating_pk(name1, name2)
+                await bot.send(ev, data, at_sender=True)
+            else:
+                return None
+        else:
+            query = name_linked(str(qqid2))
+            if query["success"]:
+                name1 = usernames[0].lower()
+                name2 = query["username"].lower()
+                data = await rating_pk(name1, name2)
+                await bot.send(ev, data, at_sender=True)
+            else:
+                return None
+    elif qqid1 and qqid2:
+        query1 = name_linked(str(qqid1))
+        query2 = name_linked(str(qqid2))
+        if query1["success"] and query2["success"]:
+            name1 = query1["username"].lower()
+            name2 = query2["username"].lower()
+            data = await rating_pk(name1, name2)
+            await bot.send(ev, data, at_sender=True)
+        else:
+            return None
     else:
         return None
-    data = await rating_pk(name1, name2)
-    await bot.send(ev, data, at_sender=True)
 
 
 @sv.on_prefix(['你有多菜'])
 async def rating_ranking(bot: NoneBot, ev: CQEvent):
-    name = 'astell'
-    page = 1
-    data = await rating_ranking_data(name, page)
-    await bot.send(ev, data)
+    await bot.send(ev, '我超，我是乌蒙大神！\n截止至 2077年02月30日11时45分14秒\n爷在火猫网站未注册用户ra排行第1\n超过了100%的玩家')
 
 
 async def guess_music_loop(bot: NoneBot, ev: CQEvent):
