@@ -136,6 +136,31 @@ async def solips_play_data(payload: dict, songs: str) -> Union[str, MessageSegme
     return msg + f"你的嗦梨总共毛到了{total_ra}分."
 
 
+async def overdose_play_data(payload: dict, songs: str) -> Union[str, MessageSegment, None]:
+    payload['version'] = list(set(version for version in plate_to_version.values()))
+    data = await get_player_data('plate', payload)
+    if isinstance(data, str):
+        return data
+
+    player_data: list[dict[str, Union[float, str, int]]] = []
+    for i in data['verlist']:
+        if i['id'] == int(songs):
+            player_data.append(i)
+    if not player_data:
+        return None
+    player_data.sort(key=lambda a: a['level_index'])
+    music = mai.total_list.by_id(songs)
+    lv_dict = {0: "Basic", 1: "Advanced", 2: "Expert", 3: "Master", 4: "Re:Master"}
+    for _data in player_data:
+        ds: float = music.ds[_data['level_index']]
+        lv: int = _data['level_index']
+        if lv == 3:
+            ra, rate = computeRa(ds, _data['achievements'], israte=True)
+            if ra >= 303:
+                msg = "我超, 天!"
+                return msg
+    return None
+
 async def music_play_data(payload: dict, songs: str) -> Union[str, MessageSegment, None]:
     payload['version'] = list(set(version for version in plate_to_version.values()))
     data = await get_player_data('plate', payload)
@@ -781,7 +806,7 @@ async def rating_ranking_data(name: Optional[str], page: Optional[int]) -> Union
         if name in [r['username'].lower() for r in sorted_rank_data]:
             rank_index = [r['username'].lower() for r in sorted_rank_data].index(name) + 1
             nickname = sorted_rank_data[rank_index - 1]['username']
-            ra = nickname = sorted_rank_data[rank_index - 1]['ra']
+            ra = sorted_rank_data[rank_index - 1]['ra']
             rank_percent = round(100-rank_index/len(rank_data)*100,2)
             data = ''
             if rank_percent >= 80:

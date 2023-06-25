@@ -1,9 +1,10 @@
 import json
 import os
 import random
-from time import sleep
-from .. import static
+
 import requests
+
+from .. import static
 
 
 def get_music_list(qqid):
@@ -87,7 +88,7 @@ def update_records_by_id(qqid, song_id, level_index):
     }
     for song in music_list:
         if song['song_id'] == song_id and song['level_index'] == level_index:
-            ach = 100.75 if random.randint(1, 10) > 4 else 101
+            ach = 100.5 + round(random.random(), 4)/2
             payload = {
                 "achievements": ach,
                 "ds": song['ds'],

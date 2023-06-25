@@ -241,8 +241,13 @@ async def maiinfo(bot: NoneBot, ev: CQEvent):
         pic = await music_play_data_dev(payload, id)
     else:
         pic = await music_play_data(payload, id)
-
     await bot.send(ev, pic, at_sender=True)
+    if id == '11509':
+        await asyncio.sleep(4)
+        msg = await overdose_play_data(payload, id)
+        if msg:
+            await bot.send(ev, msg, at_sender=True)
+
 
 
 @sv.on_prefix(['global'])
@@ -348,6 +353,8 @@ async def rating_ranking(bot: NoneBot, ev: CQEvent):
         name = args.lower()
     else:
         query = name_linked(str(ev.user_id))
+        print(int(ev.user_id))
+        print(query)
         if query["success"]:
             data = await rating_ranking_data(query["username"].lower(), 1)
             await bot.send(ev, data, at_sender=True)
@@ -422,6 +429,7 @@ async def guess_music_loop(bot: NoneBot, ev: CQEvent):
     await bot.send(ev,MessageSegment.image(_guess.b64image))
     await give_answer(bot, ev)
 
+
 async def give_answer(bot: NoneBot, ev: CQEvent):
     gid = str(ev.group_id)
     await asyncio.sleep(30)
@@ -433,6 +441,7 @@ async def give_answer(bot: NoneBot, ev: CQEvent):
     msg = f'''答案是：
 {await draw_music_info(_guess.music)}'''
     await bot.finish(ev, msg)
+
 
 @sv.on_fullmatch('抽象猜歌','猜抽象歌','曹冲称象','猜歌抽象')
 async def guess_music(bot: NoneBot, ev: CQEvent):
@@ -448,6 +457,7 @@ async def guess_music(bot: NoneBot, ev: CQEvent):
     guess.start(gid, mai, 0)
     await guess_music_loop(bot, ev)
 
+
 @sv.on_message()
 async def guess_music_solve(bot: NoneBot, ev: CQEvent):
     gid = str(ev.group_id)
@@ -461,6 +471,7 @@ async def guess_music_solve(bot: NoneBot, ev: CQEvent):
         msg = f'''猜对了！
 {await draw_music_info(_guess.music)}'''
         await bot.finish(ev, msg, at_sender=True)
+
 
 @sv.on_fullmatch('重置抽象猜歌')
 async def reset_guess(bot: NoneBot, ev: CQEvent):
@@ -487,6 +498,7 @@ async def guess_on(bot: NoneBot, ev: CQEvent):
         msg = '已开启猜歌功能'
 
     await bot.send(ev, msg, at_sender=True)
+
 
 @sv.on_fullmatch('关闭抽象猜歌')
 async def guess_off(bot: NoneBot, ev: CQEvent):
