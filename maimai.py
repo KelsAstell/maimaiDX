@@ -17,6 +17,7 @@ from .libraries.maimaidx_api_data import *
 from .libraries.maimaidx_music import alias, guess, mai
 from .libraries.maimaidx_project import *
 from .libraries.tool import *
+from .libraries.music_alias import *
 from .libraries.random_reply import *
 from .libraries.one_key_ap import *
 
@@ -237,16 +238,13 @@ async def maiinfo(bot: NoneBot, ev: CQEvent):
             await bot.finish(ev, msg.strip(), at_sender=True)
         else:
             id = str(alias[0].ID)
-    if token:
-        pic = await music_play_data_dev(payload, id)
-    else:
-        pic = await music_play_data(payload, id)
+    play_data = await music_play_data(payload, id)
+    pic = play_data["msg"]
     await bot.send(ev, pic, at_sender=True)
-    if id == '11509':
+    abs_data = is_abstract(id)
+    if abs_data["abstract"] and play_data['sss']:
         await asyncio.sleep(4)
-        msg = await overdose_play_data(payload, id)
-        if msg:
-            await bot.send(ev, msg, at_sender=True)
+        await bot.send(ev, abs_data["reply"], at_sender=True)
 
 
 
@@ -447,8 +445,6 @@ async def give_answer(bot: NoneBot, ev: CQEvent):
 
 @sv.on_fullmatch('抽象猜歌','猜抽象歌','曹冲称象','猜歌抽象')
 async def guess_music(bot: NoneBot, ev: CQEvent):
-    if not priv.check_priv(ev, priv.SUPERUSER):
-        return None
     gid = str(ev.group_id)
     if ev.group_id not in guess.config['enable']:
         await bot.finish(ev, '该群已关闭猜歌功能，开启请输入 开启抽象猜歌')
@@ -516,3 +512,60 @@ async def guess_off(bot: NoneBot, ev: CQEvent):
         msg = '已关闭猜歌功能'
 
     await bot.send(ev, msg, at_sender=True)
+
+
+@sv.on_prefix('更新歌曲名称','更改歌曲名称')
+async def update_name(bot: NoneBot, ev: CQEvent):
+    if not priv.check_priv(ev, priv.SUPERUSER):
+        return None
+    text = str(ev.message.extract_plain_text().strip())
+    text = text.split("-")
+    if len(text) > 1:
+        await bot.send(ev, updateAlias('change_name',int(text[0]),text[1]))
+        await mai.get_music_alias()
+    else:
+        await bot.send(ev, '用法: 更改歌曲名称 ID-名字')
+
+
+@sv.on_prefix('批量删除抽象别名','删除抽象别名')
+async def batch_delete(bot: NoneBot, ev: CQEvent):
+    if not priv.check_priv(ev, priv.SUPERUSER):
+        return None
+    text = str(ev.message.extract_plain_text().strip())
+    text = text.split("-")
+    if len(text) > 1:
+        await bot.send(ev, updateAlias('batch_delete',int(text[0]),text[1]))
+        await mai.get_music_alias()
+    else:
+        await bot.send(ev, '用法: 批量删除抽象别名 ID-别名1/别名2..')
+
+
+@sv.on_prefix('批量添加抽象别名','添加抽象别名')
+async def batch_add(bot: NoneBot, ev: CQEvent):
+    if not priv.check_priv(ev, priv.SUPERUSER):
+        return None
+    text = str(ev.message.extract_plain_text().strip())
+    text = text.split("-")
+    await bot.send(ev, su_batch_add_alias(int(text[0]), text[1]))
+    await mai.get_music_alias()
+
+
+@sv.on_prefix('添加新歌','添加最新最热','添加最旧最冷')
+async def zxzr(bot: NoneBot, ev: CQEvent):
+    if not priv.check_priv(ev, priv.SUPERUSER):
+        return None
+    text = str(ev.message.extract_plain_text().strip())
+    text = text.split("-")
+    if len(text) == 2:
+        await bot.send(ev, su_add_new(int(text[0]), text[1]))
+        await mai.get_music_alias()
+    else:
+        await bot.send(ev, '用法: 添加最新最热 ID-歌曲名')
+
+@sv.on_prefix('kohad-','KohaD-')
+async def zxzr(bot: NoneBot, ev: CQEvent):
+    if not priv.check_priv(ev, priv.SUPERUSER):
+        return None
+    text = str(ev.message.extract_plain_text().strip())
+    await bot.send(ev, kohd(text))
+    await mai.get_music_alias()
