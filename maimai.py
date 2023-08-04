@@ -1,6 +1,5 @@
 import asyncio
 import re
-import json
 from random import sample
 from string import ascii_uppercase, digits
 
@@ -20,6 +19,7 @@ from .libraries.tool import *
 from .libraries.music_alias import *
 from .libraries.random_reply import *
 from .libraries.one_key_ap import *
+from hoshino.rate_limit import check_rate
 
 
 
@@ -61,6 +61,8 @@ async def get_music(event: CQEvent):
 @sv.on_prefix(['嗦梨进度', '嗦🍐进度', '🍐进度'])
 async def let_me_solips(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     id = '11353'
     for i in ev.message:
         if i.type == 'at' and i.data['qq'] != 'all':
@@ -73,6 +75,8 @@ async def let_me_solips(bot: NoneBot, ev: CQEvent):
 @sv.on_prefix(['更新token', 'settoken', '设置token'])
 async def upd_token(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     args: str = ev.message.extract_plain_text().strip()
     args_list = args.split("=")
     if len(args_list) > 1:
@@ -91,6 +95,8 @@ async def upd_token(bot: NoneBot, ev: CQEvent):
 @sv.on_prefix(['获取游玩记录', '游玩记录'])
 async def get_records(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     for i in ev.message:
         if i.type == 'at' and i.data['qq'] != 'all':
             qqid = int(i.data['qq'])
@@ -100,6 +106,8 @@ async def get_records(bot: NoneBot, ev: CQEvent):
 @sv.on_prefix(['一键AP', '1keyap'])
 async def onekey_ap(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     args: str = ev.message.extract_plain_text().strip()
     args_list = args.split("-")
     dic = {"master":3,"mst":3,"advanced":1,"adv":1,"basic":0,"bas":0,"exp":2,"expert":2,"remaster":4,"rem":4}
@@ -112,11 +120,17 @@ async def onekey_ap(bot: NoneBot, ev: CQEvent):
 
 @sv.on_fullmatch(['iiDX?', 'iidx?'])
 async def dx_help(bot: NoneBot, ev: CQEvent):
-    await bot.send(ev, MessageSegment.image(image_to_base64(text_to_image(sv_help))), at_sender=True)
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
+    await bot.send(ev, MessageSegment.image(image_to_base64(sv_help)), at_sender=True)
 
 
 @sv.on_rex(r'.*mai.*什么最新最热')
 async def random_day_song(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     await bot.send(ev, await draw_music_info(mai.total_list.random()))
 
 
@@ -135,6 +149,9 @@ async def reload_music(bot: NoneBot, ev: CQEvent):
 
 @sv.on_fullmatch(['极极国王进度'])
 async def jiji_king(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     if random.randint(1,10)%2:
         await bot.send(ev, f'你已经是极极国王了', at_sender=True)
     else:
@@ -142,6 +159,9 @@ async def jiji_king(bot: NoneBot, ev: CQEvent):
 
 @sv.on_suffix(['神进度?'])
 async def shen(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     name: str = ev.message.extract_plain_text().strip().lower()
     if random.randint(1,10)%2:
         await bot.send(ev, f'你已经是{name}神了！', at_sender=True)
@@ -151,8 +171,10 @@ async def shen(bot: NoneBot, ev: CQEvent):
 
 @sv.on_suffix(['是什么抽象歌', '是啥抽象歌'])
 async def what_song(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     name: str = ev.message.extract_plain_text().strip().lower()
-    
     data = mai.total_alias_list.by_alias(name)
     if not data:
         await bot.finish(ev, randomNotFound(), at_sender=True)
@@ -168,6 +190,9 @@ async def what_song(bot: NoneBot, ev: CQEvent):
 
 @sv.on_suffix(['有什么抽象别称', '有什么抽象别名'])
 async def how_song(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     name: str = ev.message.extract_plain_text().strip().lower()
     
     alias = mai.total_alias_list.by_alias(name)
@@ -195,9 +220,11 @@ async def how_song(bot: NoneBot, ev: CQEvent):
     await bot.send(ev, msg, at_sender=True)
 
 
-@sv.on_prefix(['ib50', 'IB50', 'IB40', 'ib40'])
+@sv.on_prefix(['ib50', 'ib40', '我的舞萌芯', '我的舞萌心'])
 async def best_50(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     args: str = ev.message.extract_plain_text().strip()
     for i in ev.message:
         if i.type == 'at' and i.data['qq'] != 'all':
@@ -215,6 +242,8 @@ async def best_50(bot: NoneBot, ev: CQEvent):
 @sv.on_prefix(['info', 'INFO'])
 async def maiinfo(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     id = '1'
     args: str = ev.message.extract_plain_text().strip()
     for i in ev.message:
@@ -250,6 +279,9 @@ async def maiinfo(bot: NoneBot, ev: CQEvent):
 
 @sv.on_prefix(['global'])
 async def globinfo(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     args: str = ev.message.extract_plain_text().strip()
     if not args:
         await bot.finish(ev, '请输入曲目id或曲名', at_sender=True)
@@ -294,6 +326,8 @@ async def globinfo(bot: NoneBot, ev: CQEvent):
 @sv.on_rex(r'^([真超檄橙暁晓桃櫻樱紫菫堇白雪輝辉熊華华爽舞霸宙星])([極极将舞神者]舞?)抽象进度\s?(.+)?')
 async def plate_process(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     match: Match[str] = ev['match']
     nickname = ''
     for i in ev.message:
@@ -313,6 +347,8 @@ async def plate_process(bot: NoneBot, ev: CQEvent):
     
     if match.group(1) in ['霸', '舞']:
         payload['version'] = list(set(version for version in list(plate_to_version.values())[:-9]))
+    elif match.group(1) == '真':
+        payload['version'] = list(set(version for version in list(plate_to_version.values())[0:2]))
     else:
         payload['version'] = [plate_to_version[match.group(1)]]
 
@@ -323,6 +359,8 @@ async def plate_process(bot: NoneBot, ev: CQEvent):
 @sv.on_rex(r'^([0-9]+\+?)抽象分数列表\s?([0-9]+)?\s?(.+)?')
 async def level_achievement_list(bot: NoneBot, ev: CQEvent):
     qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     match: Match[str] = ev['match']
     nickname = ''
     for i in ev.message:
@@ -348,11 +386,17 @@ async def level_achievement_list(bot: NoneBot, ev: CQEvent):
 
 @sv.on_prefix(['我有多菜','他有多菜','她有多菜','祂有多菜'])
 async def rating_ranking(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    for i in ev.message:
+        if i.type == 'at' and i.data['qq'] != 'all':
+            qqid = int(i.data['qq'])
+    if not check_rate(str(qqid)):
+        return None
     args: str = ev.message.extract_plain_text().strip()
     if args:
         name = args.lower()
     else:
-        query = name_linked(str(ev.user_id))
+        query = name_linked(str(qqid))
         print(int(ev.user_id))
         print(query)
         if query["success"]:
@@ -372,6 +416,8 @@ async def rating_ranking(bot: NoneBot, ev: CQEvent):
 @sv.on_prefix(['rapk', 'ra比较', '仇人对战'])
 async def rating_compare(bot: NoneBot, ev: CQEvent):
     qqid1 = ev.user_id
+    if not check_rate(qqid1):
+        return None
     qqid2 = ''
     for i in ev.message:
         if i.type == 'at' and i.data['qq'] != 'all':
@@ -418,6 +464,9 @@ async def rating_compare(bot: NoneBot, ev: CQEvent):
 
 @sv.on_prefix(['你有多菜'])
 async def rating_ranking(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     await bot.send(ev, '我超，我是乌蒙大神！\n截止至 2077年02月30日11时45分14秒\n爷在火猫网站未注册用户ra排行第1\n超过了100%的玩家')
 
 
@@ -445,6 +494,9 @@ async def give_answer(bot: NoneBot, ev: CQEvent):
 
 @sv.on_fullmatch('抽象猜歌','猜抽象歌','曹冲称象','猜歌抽象')
 async def guess_music(bot: NoneBot, ev: CQEvent):
+    qqid = ev.user_id
+    if not check_rate(str(qqid)):
+        return None
     gid = str(ev.group_id)
     if ev.group_id not in guess.config['enable']:
         await bot.finish(ev, '该群已关闭猜歌功能，开启请输入 开启抽象猜歌')
@@ -488,7 +540,7 @@ async def reset_guess(bot: NoneBot, ev: CQEvent):
 async def guess_on(bot: NoneBot, ev: CQEvent):
     gid = ev.group_id
     if not priv.check_priv(ev, priv.ADMIN):
-        msg = '仅允许管理员开启'
+        return None
     elif gid in guess.config['enable']:
         msg = '已开启猜歌功能'
     else:
@@ -502,7 +554,7 @@ async def guess_on(bot: NoneBot, ev: CQEvent):
 async def guess_off(bot: NoneBot, ev: CQEvent):
     gid = ev.group_id
     if not priv.check_priv(ev, priv.ADMIN):
-        msg = '仅允许管理员关闭'
+        return None
     elif gid in guess.config['disable']:
         msg = '已关闭猜歌功能'
     else:
@@ -569,3 +621,9 @@ async def zxzr(bot: NoneBot, ev: CQEvent):
     text = str(ev.message.extract_plain_text().strip())
     await bot.send(ev, kohd(text))
     await mai.get_music_alias()
+
+@sv.on_fullmatch('同步别名库','联网更新别名库')
+async def upd_alias_list(bot: NoneBot, ev: CQEvent):
+    if not priv.check_priv(ev, priv.SUPERUSER):
+        return None
+    await bot.send(ev, await merge_remote_alias())

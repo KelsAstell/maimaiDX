@@ -24,7 +24,7 @@ diffs = ['Basic', 'Advanced', 'Expert', 'Master', 'Re:Master']
 levelList = ['1', '2', '3', '4', '5', '6', '7', '7+', '8', '8+', '9', '9+', '10', '10+', '11', '11+', '12', '12+', '13', '13+', '14', '14+', '15']
 achievementList = [50.0, 60.0, 70.0, 75.0, 80.0, 90.0, 94.0, 97.0, 98.0, 99.0, 99.5, 100.0, 100.5]
 BaseRaSpp = [7.0, 8.0, 9.6, 11.2, 12.0, 13.6, 15.2, 16.8, 20.0, 20.3, 20.8, 21.1, 21.6, 22.4]
-
+CURRENT_RATING = 0
 
 class ChartInfo(BaseModel):
     
@@ -104,7 +104,7 @@ class DrawBest:
 
     def __init__(self, UserInfo: UserInfo, qqId: Optional[Union[int, str]] = None) -> None:
 
-        self.userName = UserInfo.username
+        self.userName = UserInfo.nickname
         self.plate = UserInfo.plate
         self.addRating = UserInfo.additional_rating
         self.Rating = UserInfo.rating
@@ -178,6 +178,7 @@ class DrawBest:
 
     async def whiledraw(self, data: List[ChartInfo], type: bool) -> Image.Image:
         # y为第一排纵向坐标，dy为各排间距
+
         y = 430 if type else 1670
         dy = 170
 
@@ -211,7 +212,7 @@ class DrawBest:
             for _ in range(dxnum):
                 self._im.alpha_composite(self.dxstar[dxtype], (x + DXSTAR_DEST[dxnum] + 20 * _, y + 74))
 
-            self._tb.draw(x + 40, y + 148, 20, info.song_id, anchor='mm')
+            self._tb.draw(x + 40, y + 148, 20, str(info.song_id), anchor='mm')
             title = info.title
             if self._coloumWidth(title) > 18:
                 title = self._changeColumnWidth(title, 17) + '...'
@@ -222,6 +223,9 @@ class DrawBest:
             self._tb.draw(x + 155 + r[2], y + 68, 22, f'.{s}%', TEXT_COLOR[info.level_index], anchor='ld')
             self._tb.draw(x + 340, y + 60, 18, f'{info.dxScore}/{dxscore}', TEXT_COLOR[info.level_index], anchor='mm')
             self._tb.draw(x + 155, y + 80, 22, f'{info.ds} -> {info.ra}', TEXT_COLOR[info.level_index], anchor='lm')
+            if not type:
+                global CURRENT_RATING
+                CURRENT_RATING += info.ra
 
     async def draw(self):
         
@@ -241,7 +245,7 @@ class DrawBest:
         rating = Image.open(os.path.join(self.maimai_dir, 'UI_CMN_Shougou_Rainbow.png')).resize((454, 50))
         self._diff = [basic, advanced, expert, master, remaster]
         self.dxstar = [Image.open(os.path.join(self.maimai_dir, f'UI_RSL_DXScore_Star_0{_ + 1}.png')).resize((20, 20)) for _ in range(3)]
-        self.rank = {'d': 'D', 'c': 'c', 'b': 'B', 'bb': 'BB', 'bbb': 'BBB', 'a': 'A', 'aa': 'AA', 'aaa': 'AAA', 's': 'S', 'sp': 'Sp', 'ss': 'SS', 'ssp': 'SSp', 'sss': 'SSS', 'sssp': 'SSSp'}
+        self.rank = {'d': 'D', 'c': 'C', 'b': 'B', 'bb': 'BB', 'bbb': 'BBB', 'a': 'A', 'aa': 'AA', 'aaa': 'AAA', 's': 'S', 'sp': 'Sp', 'ss': 'SS', 'ssp': 'SSp', 'sss': 'SSS', 'sssp': 'SSSp'}
         self.fcl = {'fc': 'FC', 'fcp': 'FCp', 'ap': 'AP', 'app': 'APp'}
         self.fsl = {'fs': 'FS', 'fsp': 'FSp', 'fsd': 'FSD', 'fsdp': 'FSDp'}
 
@@ -253,25 +257,23 @@ class DrawBest:
             plate = Image.open(os.path.join(self.maimai_dir, f'{self.plate}.png')).resize((1420, 230))
         else:
             plate = Image.open(os.path.join(self.maimai_dir, f'{str(random.randint(1,24))}.png')).resize((1420, 230))
-        if self.userName == 'ASTELL':
-            self.userName='Emo Bot'
         if self.userName == 'Emowolf':
             plate = Image.open(os.path.join(self.maimai_dir, f'绿洲计划.png')).resize((1420, 230))
             self.userName='大以巴狼艾斯'
         self._im.alpha_composite(plate, (390, 100))
         icon = Image.open(os.path.join(self.maimai_dir, 'UI_Icon_309503.png')).resize((214, 214))
         self._im.alpha_composite(icon, (398, 108))
-        if self.qqId:
-            try:
-                async with aiohttp.request('GET', f'http://q1.qlogo.cn/g?b=qq&nk={self.qqId}&s=100', timeout=aiohttp.ClientTimeout(total=10)) as resp:
-                    qqLogo = Image.open(io.BytesIO(await resp.read()))
-                self._im.alpha_composite(Image.new('RGBA', (203, 203), (255, 255, 255, 255)), (404, 114))
-                self._im.alpha_composite(qqLogo.convert('RGBA').resize((201, 201)), (405, 115))
-            except Exception:
-                pass
+        # if self.qqId:
+        #     try:
+        #         async with aiohttp.request('GET', f'http://q1.qlogo.cn/g?b=qq&nk={self.qqId}&s=100', timeout=aiohttp.ClientTimeout(total=3)) as resp:
+        #             qqLogo = Image.open(io.BytesIO(await resp.read()))
+        #         self._im.alpha_composite(Image.new('RGBA', (203, 203), (255, 255, 255, 255)), (404, 114))
+        #         self._im.alpha_composite(qqLogo.convert('RGBA').resize((201, 201)), (405, 115))
+        #     except Exception:
+        #         pass
         self._im.alpha_composite(dx_rating, (620, 122))
         Rating = f'{self.Rating:05d}'
-        if self.userName == 'Emo Bot':
+        if self.qqId == 484894005:
             Rating = '23333'
         for n, i in enumerate(Rating):
             self._im.alpha_composite(Image.open(os.path.join(self.maimai_dir, f'UI_NUM_Drating_{i}.png')).resize((20, 26)), (763 + 23 * n, 140))
@@ -291,9 +293,17 @@ class DrawBest:
         else:
             self._meiryo.draw(847, 300, 22, 'UNiVERSE PLUS Rating System', (0, 0, 0, 255), 'mm', 3, (255, 255, 255, 255))
         self._meiryo.draw(900, 2365, 35, f'Designed by Yuri-YuzuChaN & BlueDeer233 | Generated by {BOTNAME}', (103, 20, 141, 255), 'mm', 3, (255, 255, 255, 255))
-
         await self.whiledraw(self.sdBest, True)
+        global CURRENT_RATING
+        CURRENT_RATING = 0
         await self.whiledraw(self.dxBest, False)
+
+        recent_ra = str(round(CURRENT_RATING * 10 / 3))
+        for n, i in enumerate(recent_ra):
+            self._im.alpha_composite(
+                Image.open(os.path.join(self.maimai_dir, f'UI_NUM_Drating_{i}.png')).resize((20, 26)),
+                (763 + 23 * n, 50))
+
 
         return self._im
 

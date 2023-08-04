@@ -1,5 +1,6 @@
 import json
 import os
+import time
 import traceback
 from typing import Dict, List, Union
 
@@ -17,6 +18,7 @@ ALIAS = {
     'status': 'GetAliasStatus',
     'apply': 'ApplyAlias',
     'agree': 'AgreeUser',
+    'music': 'GetMaimaiDXMusic',
     'end': 'GetAliasEnd'
 }
 
@@ -44,10 +46,13 @@ async def get_player_data(project: str, payload: dict) -> Union[dict, str]:
                 data = '该用户禁止了其他人获取数据。'
             elif resp.status == 200:
                 data = await resp.json()
-                if payload['qq'] and 'username' in data:
+                if 'qq' in payload and 'username' in data:
                     with open(os.path.join(static, 'qq_name_list.json'), 'r', encoding='utf-8') as fp:
                         name_list = json.load(fp)
-                    name_list[payload['qq']] = data['username']
+                    if str(payload['qq']) in name_list:
+                        name_list[str(payload['qq'])]['id'] = data['username']
+                    else:
+                        name_list[str(payload['qq'])] = {"id":data['username'], "last_call":int(time.time())}
                     json_str = json.dumps(name_list, indent=4, ensure_ascii=False)
                     with open(os.path.join(static, 'qq_name_list.json'), 'w', encoding='utf-8') as json_file:
                         json_file.write(json_str)

@@ -4,11 +4,30 @@ from PIL import Image, ImageDraw, ImageFont
 import json
 import os
 
+from .maimaidx_api_data import get_music_alias
 from .. import static, BOTNAME
 
 nls_data = ['是不是', '可能是', '也许是', '差不多是', '大概是', '没准是']
 #static = r'D:\Projects\IDEA\musicalis\static'
 ALL_ALIAS = os.path.join(static, 'all_alias.json')
+
+
+async def merge_remote_alias():
+    with open(ALL_ALIAS, 'r', encoding='utf-8') as fp:
+        local_alias = json.load(fp)
+    remote_alias = await get_music_alias("all")
+    music = 0
+    for keys in remote_alias:
+        if keys not in local_alias:
+            local_alias[keys] = remote_alias[keys]
+            music += 1
+    json_str = json.dumps(local_alias, indent=4, ensure_ascii=False)
+    with open(ALL_ALIAS, 'w', encoding='utf-8') as fp:
+        fp.write(json_str)
+    if music > 0:
+        return f"更新了{music}首歌的别名, 你就是抽象大神?"
+    else:
+        return "本地的别名库已经是最新最烫了捏"
 
 
 def su_add_new(song_id, alias):
