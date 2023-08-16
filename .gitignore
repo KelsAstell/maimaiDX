@@ -22,7 +22,7 @@ var/
 wheels/
 pip-wheel-metadata/
 share/python-wheels/
-*.egg-info/
+*.egg-potato_info/
 .installed.cfg
 *.egg
 MANIFEST
@@ -73,7 +73,7 @@ docs/_build/
 
 # PyBuilder
 target/
-
+bot_config.json
 # Jupyter Notebook
 .ipynb_checkpoints
 
@@ -131,6 +131,8 @@ dmypy.json
 
 # static
 static.zip
+static
+plugins
 # idea
 *.iml
 .idea/

@@ -4,11 +4,10 @@ from PIL import Image, ImageDraw, ImageFont
 import json
 import os
 
-from .maimaidx_api_data import get_music_alias
-from .. import static, BOTNAME
+from functions.api import get_music_alias
+from functions.config import static, BOTNAME
 
 nls_data = ['是不是', '可能是', '也许是', '差不多是', '大概是', '没准是']
-#static = r'D:\Projects\IDEA\musicalis\static'
 ALL_ALIAS = os.path.join(static, 'all_alias.json')
 
 
@@ -18,8 +17,11 @@ async def merge_remote_alias():
     remote_alias = await get_music_alias("all")
     music = 0
     for keys in remote_alias:
-        if keys not in local_alias:
-            local_alias[keys] = remote_alias[keys]
+        if len(remote_alias[keys]) != 0:
+            for song_id in remote_alias[keys]:
+                if song_id in local_alias:
+                    if keys not in local_alias[song_id]["Alias"]:
+                        local_alias[song_id]["Alias"].append(keys)
             music += 1
     json_str = json.dumps(local_alias, indent=4, ensure_ascii=False)
     with open(ALL_ALIAS, 'w', encoding='utf-8') as fp:

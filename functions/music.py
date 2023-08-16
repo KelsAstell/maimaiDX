@@ -1,20 +1,20 @@
+import asyncio
 import json
 import os
 import random
 from collections import namedtuple
 from copy import deepcopy
-from io import BytesIO
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union, Any
 
 import aiofiles
 import aiohttp
 from PIL import Image
 from numpy.core.defchararray import upper
 from pydantic import BaseModel, Field
+from functions.config import *
 
-from .. import log, static, update_channel
-from .image import image_to_base64
-from .maimaidx_api_data import *
+from functions.api import *
+from functions.log_utils import Log
 
 cover_dir = os.path.join(static, 'mai', 'cover')
 
@@ -36,8 +36,8 @@ Notes2 = namedtuple('Notes', ['tap', 'hold', 'slide', 'touch', 'brk'])
 
 
 class Chart(BaseModel):
-
-    notes: Optional[Union[Notes1, Notes2]]
+    notes: Optional[Union[Any, Notes1, Notes2]]
+    #notes: Optional[Union[Notes1, Notes2]]
     charter: Optional[str] = None
 
 
@@ -190,7 +190,7 @@ async def parse_xray_data(xray_data):
                 if song_id in origin:
                     if keys not in origin[song_id]["Alias"]:
                         origin[song_id]["Alias"].append(keys)
-    log.info('别名库合并完成, yoooo↗')
+    print('别名库合并完成, yoooo↗')
     return origin
 
 
@@ -203,7 +203,7 @@ async def merge_local_alias(remote_data):
     for key in remote_data:
         if key in origin:
             origin[key]["Alias"] = list(set(origin[key]["Alias"] + remote_data[key]["Alias"]))
-    log.info('别名库合并完成, yoooo↗')
+    print('别名库合并完成, yoooo↗')
     return origin
 
 
@@ -251,22 +251,23 @@ async def get_music_list() -> MusicList:
     try:
         async with aiohttp.request('GET', 'https://www.diving-fish.com/api/maimaidxprober/music_data', timeout=aiohttp.ClientTimeout(total=30)) as obj_data:
             if obj_data.status != 200:
-                log.error('maimaiDX曲目数据获取失败，请检查网络环境。已切换至本地暂存文件')
+                print('maimaiDX曲目数据获取失败，请检查网络环境。已切换至本地暂存文件')
                 async with aiofiles.open(os.path.join(static, 'music_data.json'), 'r', encoding='utf-8') as f:
                     data = json.loads(await f.read())
             else:
                 data = await obj_data.json()
+                print('曲目数据更新完成')
                 async with aiofiles.open(os.path.join(static, 'music_data.json'), 'w', encoding='utf-8') as f:
                     await f.write(json.dumps(data, ensure_ascii=False, indent=4))
     except Exception:
-        log.error(f'Error: {traceback.format_exc()}')
-        log.error('maimaiDX曲目数据获取失败，请检查网络环境。已切换至本地暂存文件')
+        print(f"Error:{traceback.format_exc()}")
+        print('maimaiDX曲目数据获取失败，请检查网络环境。已切换至本地暂存文件')
         async with aiofiles.open(os.path.join(static, 'music_data.json'), 'r', encoding='utf-8') as f:
             data = json.loads(await f.read())
     try:
         async with aiohttp.request('GET', 'https://www.diving-fish.com/api/maimaidxprober/chart_stats', timeout=aiohttp.ClientTimeout(total=30)) as obj_stats:
             if obj_stats.status != 200:
-                log.error('maimaiDX数据获取错误，请检查网络环境。已切换至本地暂存文件')
+                print('maimaiDX数据获取错误，请检查网络环境。已切换至本地暂存文件')
                 async with aiofiles.open(os.path.join(static, 'chart_stats.json'), 'r', encoding='utf-8') as f:
                     stats = json.loads(await f.read())
             else:
@@ -274,8 +275,8 @@ async def get_music_list() -> MusicList:
                 async with aiofiles.open(os.path.join(static, 'chart_stats.json'), 'w', encoding='utf-8') as f:
                     await f.write(json.dumps(stats, ensure_ascii=False, indent=4))
     except Exception:
-        log.error(f'Error: {traceback.format_exc()}')
-        log.error('maimaiDX数据获取错误，请检查网络环境。已切换至本地暂存文件')
+        print(f"Error:{traceback.format_exc()}")
+        print('maimaiDX数据获取错误，请检查网络环境。已切换至本地暂存文件')
         async with aiofiles.open(os.path.join(static, 'chart_stats.json'), 'r', encoding='utf-8') as f:
             stats = json.loads(await f.read())
 
@@ -285,35 +286,35 @@ async def get_music_list() -> MusicList:
             _stats = [_data if _data else None for _data in stats['charts'][music['id']]] if {} in stats['charts'][music['id']] else stats['charts'][music['id']]
         else:
             _stats = None
-        total_list[num] = Music(stats=_stats, **total_list[num])
+        total_list[num] = Music(stats=_stats,**total_list[num])
 
     return total_list
 
 
 async def get_music_alias_list() -> AliasList:
-    """
-    获取所有别名
-    """
-    data = await get_music_alias('all') if upper(update_channel) != 'XRAY' else await get_xray_alias()
+    if upper(update_channel) == 'XRAY':
+        data = await get_xray_alias()
+    elif upper(update_channel) == 'OFFICIAL':
+        data = await get_music_alias('all')
+    else:
+        async with aiofiles.open(os.path.join(static, 'all_alias.json'), 'r', encoding='utf-8') as f:
+            data = json.loads(await f.read())
     if isinstance(data, str):
-        log.info('获取所有曲目别名信息错误，请检查网络环境。已切换至本地暂存文件')
+        Log.error('获取所有曲目别名信息错误，请检查网络环境。已切换至本地暂存文件')
         async with aiofiles.open(os.path.join(static, 'all_alias.json'), 'r', encoding='utf-8') as f:
             data = json.loads(await f.read())
     else:
         if upper(update_channel) == 'XRAY':
-            '''
-            防最新最热装置(防止因为缺少all_alias.json报错)
-            '''
             if os.path.isfile(os.path.join(static, 'all_alias.json')):
                 data = parse_xray_data(data)
-                log.info('当前使用的曲目别名信息库由 XrayBot 提供')
+                Log.info('当前使用的曲目别名信息库由 XrayBot 提供')
             else:
                 data = await get_music_alias('all')
-                log.info('你似乎是第一次使用本插件，若要启用 XrayBot 的别名库，需要重新运行一次机器人')
+                Log.warn('你似乎是第一次使用本插件，若要启用 XrayBot 的别名库，需要重新运行一次')
         else:
             if os.path.isfile(os.path.join(static, 'all_alias.json')):
                 data = await merge_local_alias(data)
-                log.info('当前使用官方的曲目别名信息库')
+                Log.info('合并本地别名数据完成')
         async with aiofiles.open(os.path.join(static, 'all_alias.json'), 'w', encoding='utf-8') as f:
             await f.write(json.dumps(data, ensure_ascii=False, indent=4))
     
@@ -326,18 +327,18 @@ async def get_music_alias_list() -> AliasList:
 
 async def get_local_music_list() -> MusicList:
     try:
-        log.info('当前使用离线模式，已跳过曲目数据和别名更新')
+        Log.info(f'已跳过曲目数据更新')
         async with aiofiles.open(os.path.join(static, 'music_data.json'), 'r', encoding='utf-8') as f:
             data = json.loads(await f.read())
     except Exception:
-        log.error(f'Error: {traceback.format_exc()}')
-        log.error('本地曲目文件读取失败')
+        print(f"Error:{traceback.format_exc()}")
+        Log.error('本地曲目文件读取失败')
     try:
         async with aiofiles.open(os.path.join(static, 'chart_stats.json'), 'r', encoding='utf-8') as f:
             stats = json.loads(await f.read())
     except Exception:
-        log.error(f'Error: {traceback.format_exc()}')
-        log.error('本地曲目统计数据读取失败')
+        print(f"Error:{traceback.format_exc()}")
+        Log.error('本地曲目统计数据读取失败')
 
     total_list: MusicList = MusicList(data)
     for num, music in enumerate(total_list):
@@ -381,147 +382,5 @@ class MaiMusic:
         """
         self.total_alias_list = await get_music_alias_list() if upper(update_channel)!='OFFLINE' else await get_local_music_alias_list()
 
-    def guess(self):
-        """
-        初始化猜歌数据
-        """
-        self.hot_music_ids = []
-        for music in self.total_list:
-            if music.stats:
-                count = 0
-                for stats in music.stats:
-                    if stats:
-                        count += stats.cnt if stats.cnt else 0
-                if count > 10000:
-                    self.hot_music_ids.append(music.id)  # 游玩次数超过1w次加入猜歌库
-        self.guess_data = list(filter(lambda x: x.id in self.hot_music_ids, self.total_list))
-
-    async def start(self):
-        """
-        开始猜歌
-        """
-        self.music: Music = random.choice(self.guess_data)
-        self.guess_options = [
-            f'的 Expert 难度是 {self.music.level[2]}',
-            f'的 Master 难度是 {self.music.level[3]}',
-            f'的分类是 {self.music.basic_info.genre}',
-            f'的版本是 {self.music.basic_info.version}',
-            f'的艺术家是 {self.music.basic_info.artist}',
-            f'{"不" if self.music.type == "SD" else ""}是 DX 谱面',
-            f'{"没" if len(self.music.ds) == 4 else ""}有白谱',
-            f'的 BPM 是 {self.music.basic_info.bpm}'
-        ]
-        music = mai.total_alias_list.by_id(self.music.id)
-        self.answer = music[0].Alias
-        self.answer.append(self.music.id)
-        self.guess_options = random.sample(self.guess_options, 6)
-        img = Image.open(await download_music_pictrue(self.music.id))
-        w, h = img.size
-        w2, h2 = int(w / 3), int(h / 3)
-        l, u = random.randrange(0, int(2 * w / 3)), random.randrange(0, int(2 * h / 3))
-        img = img.crop((l, u, l+w2, u+h2))
-        self.b64image = image_to_base64(img)
-        self.is_end = False
 
 mai = MaiMusic()
-
-class Guess:
-
-    Group: Dict[str, Dict[str, Union[MaiMusic, int]]] = {}
-
-    def __init__(self) -> None:
-        """
-        猜歌类
-        """
-        self.config_json = os.path.join(static, 'guess_config.json')
-        if not os.path.exists(self.config_json):
-            with open(self.config_json, 'w', encoding='utf-8') as f:
-                json.dump({'enable': [], 'disable': []}, f)
-        self.config: Dict[str, List[int]] = json.load(open(self.config_json, 'r', encoding='utf-8'))
-    
-    def add(self, gid: str):
-        """
-        新增猜歌群，防止重复指令
-        """
-        self.Group[gid] = {}
-    
-    def start(self, gid: str, music: MaiMusic, cycle: int = 0):
-        """
-        正式开始猜歌
-        """
-        self.Group[gid] = {
-            'object': music,
-            'cycle': cycle
-        }
-
-    def end(self, gid: str):
-        """
-        结束猜歌
-        """
-        del self.Group[gid]
-
-    def guess_change(self, gid: int, set: bool):
-        """
-        猜歌开关
-        """
-        if set:
-            if gid not in self.config['enable']:
-                self.config['enable'].append(gid)
-            if gid in self.config['disable']:
-                self.config['disable'].remove(gid)
-        else:
-            if gid not in self.config['disable']:
-                self.config['disable'].append(gid)
-            if gid in self.config['enable']:
-                self.config['enable'].remove(gid)
-        try:
-            with open(self.config_json, 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, ensure_ascii=True, indent=4)
-        except:
-            log.error(traceback.format_exc())
-
-guess = Guess()
-
-class GroupAlias:
-
-    def __init__(self) -> None:
-        self.group_alias = os.path.join(static, 'group_alias.json')
-        if not os.path.exists(self.group_alias):
-            with open(self.group_alias, 'w', encoding='utf-8') as f:
-                json.dump({'enable': [], 'disable': [], 'global': True}, f)
-        self.config: Dict[str, List[int]] = json.load(open(self.group_alias, 'r', encoding='utf-8'))
-        if 'global' not in self.config:
-            self.config['global'] = True
-            self.alias_save()
-
-    def alias_change(self, gid: int, set: bool):
-        """
-        别名推送开关
-        """
-        if set:
-            if gid not in self.config['enable']:
-                self.config['enable'].append(gid)
-            if gid in self.config['disable']:
-                self.config['disable'].remove(gid)
-        else:
-            if gid not in self.config['disable']:
-                self.config['disable'].append(gid)
-            if gid in self.config['enable']:
-                self.config['enable'].remove(gid)
-        self.alias_save()
-
-    def alias_global_change(self, set: bool):
-        if set:
-            self.config['global'] = True
-        else:
-            self.config['global'] = False
-        self.alias_save()
-
-    def alias_save(self):
-        try:
-            with open(self.group_alias, 'w', encoding='utf-8') as f:
-                json.dump(self.config, f, ensure_ascii=True, indent=4)
-        except:
-            log.error(traceback.format_exc())
-
-alias = GroupAlias()
