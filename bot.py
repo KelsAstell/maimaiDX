@@ -1,9 +1,8 @@
-import asyncio
 import io
 import time
-from datetime import datetime
 
 import aiohttp
+import psutil
 from khl import Bot, Message
 from khl.card import CardMessage, Card, Module, Element, Types
 
@@ -15,15 +14,15 @@ from functions.config import BOTNAME
 from functions.info import music_play_data, name_linked, rating_ranking_data, rating_pk, draw_music_info
 from functions.music import mai
 from functions.random_reply import randomNotFound
+from plugins.aioAPI.libraries.random_reply import randomKFC
+from plugins.aioAPI.libraries.utils import queryAnswer, queryDuJiTang, queryYiYan
 from plugins.fish.libraries.fish_utils import *
 from plugins.mcping.libraries.info import mcinfo, mcinfo_min
 from plugins.mcping.libraries.remote import say, execute
 from plugins.openAI.libraries.functions import openAI
 from plugins.openAI.libraries.random_reply import randomThink
-from plugins.potato.libraries.functions import reset_potato, set_event, forecast, potato_info, harvest, upgrade_potato, \
-    text_to_image, td_guai_tan, tdz_guai_tan
-from plugins.randompic.functions.functions import astell_words
-from plugins.randompic.randompic import catcat, iidx, kkm, fursuitfriday, furcon_pics, furcon_pics_personal
+from plugins.potato.libraries.functions import *
+from plugins.randompic.randompic import *
 
 with open('./bot_config.json', 'r', encoding='utf-8') as f:
     bot_config = json.load(f)
@@ -66,9 +65,9 @@ async def info(qqid, args):
             song_id = str(alias[0].ID)
     play_data = await music_play_data(payload, song_id)
     pic = play_data["msg"]
-    #pic.show()
+    # pic.show()
     img_url = await prepare_image(pic)
-    return {'url': img_url,'sss':play_data['sss'],'comment':play_data['comment']}
+    return {'url': img_url, 'sss': play_data['sss'], 'comment': play_data['comment']}
 
 
 async def best_50(user):
@@ -77,6 +76,8 @@ async def best_50(user):
         payload = {'qq': user}
     elif isinstance(user, str):
         payload = {'username': user}
+        if user.lower() in bot_config['user']['blacklist']:
+            return "该用户已被Bot封禁, 无法查看Best50"
     payload['b50'] = True
     response = await get_player_data('best', payload)
     if response['success']:
@@ -120,6 +121,17 @@ async def b50(msg: Message, args: str = ''):
     start_time = time.perf_counter()
     qqid = await check_bind(msg.author_id)
     if args:
+        if args.lower() in bot_config['user']['blacklist']:
+            await msg.reply(
+                CardMessage(
+                    Card(
+                        Module.Header(f'OOPS! {msg.author.nickname}试图查询已被封禁的ID'),
+                        Module.Context(f'封禁名单由{BOTNAME} / ELISA Bot开发组维护.'),
+                        Module.Divider(),
+                        Module.Header(f'封禁理由如下:'),
+                        Module.Context(Element.Text(await ban_reason(args.lower())), Types.Text.KMD)
+                    )))
+            return None
         data = await best_50(args.lower())
     elif qqid:
         data = await best_50(qqid)
@@ -154,7 +166,8 @@ async def music_info(msg: Message, args: str = ''):
             await msg.reply(NOT_BIND)
             return None
     else:
-        await msg.reply("抓抓呆毛, " + random.choice(['你要查啥?','你要查什么','你要查what?']) + "\n命令格式：/potato_info <歌曲名/id/别名>")
+        await msg.reply("抓抓呆毛, " + random.choice(
+            ['你要查啥?', '你要查什么', '你要查what?']) + "\n命令格式：/potato_info <歌曲名/id/别名>")
         return None
     if isinstance(data, str):
         await msg.reply(data)
@@ -175,9 +188,8 @@ async def music_info(msg: Message, args: str = ''):
         await msg.reply(f"我超, {data['comment']}!")
 
 
-@bot.command(name='rating', aliases=['rainfo','ra','我有多菜','他有多菜','她有多菜'])
+@bot.command(name='rating', aliases=['rainfo', 'ra', '我有多菜', '他有多菜', '她有多菜'])
 async def ra(msg: Message, args: str = ''):
-    Log.info(f'[Best50] {msg.author.nickname} 触发了ra查询.')
     if args:
         name = args.lower()
         data = await rating_ranking_data(name, 1)
@@ -193,7 +205,7 @@ async def ra(msg: Message, args: str = ''):
             await msg.reply(NOT_BIND)
 
 
-@bot.command(name='rapk', aliases=['ra比较','有人对战','友人对战','仇人对战'])
+@bot.command(name='rapk', aliases=['ra比较', '有人对战', '友人对战', '仇人对战'])
 async def rapk(msg: Message, name1: str = '', name2: str = ''):
     Log.info(f'[raPK] {msg.author.nickname} 触发了raPK.')
     if name1 != name2 and name1:
@@ -229,32 +241,32 @@ async def genshin(msg: Message):
     await msg.reply('我是乌蒙大神🤩！\n截止至 2077年02月30日11时45分14秒\n爷在火猫网站ra排行第1\n超过了1000%的玩家')
 
 
-@bot.command(name='更新歌曲名称', aliases=['更改歌曲名称','更改歌曲名','更新歌曲名'])
-async def update_name(msg: Message, text:str = ''):
+@bot.command(name='更新歌曲名称', aliases=['更改歌曲名称', '更改歌曲名', '更新歌曲名'])
+async def update_name(msg: Message, text: str = ''):
     if not await check_perm(msg.author_id):
         return None
     text = text.split("-")
     if len(text) > 1:
-        await msg.reply(updateAlias('change_name',int(text[0]),text[1]))
+        await msg.reply(updateAlias('change_name', int(text[0]), text[1]))
         await mai.get_music_alias()
     else:
         await msg.reply('用法: 更改歌曲名称 ID-名字')
 
 
-@bot.command(name='删除别名', aliases=['批量删除别名','批量删除抽象别名','删除抽象别名'])
-async def batch_delete(msg: Message, text:str = ''):
+@bot.command(name='删除别名', aliases=['批量删除别名', '批量删除抽象别名', '删除抽象别名'])
+async def batch_delete(msg: Message, text: str = ''):
     if not await check_perm(msg.author_id):
         return None
     text = text.split("-")
     if len(text) > 1:
-        await msg.reply(updateAlias('batch_delete',int(text[0]),text[1]))
+        await msg.reply(updateAlias('batch_delete', int(text[0]), text[1]))
         await mai.get_music_alias()
     else:
         await msg.reply('用法: 删除别名 ID-别名1/别名2..')
 
 
-@bot.command(name='添加别名', aliases=['批量添加别名','批量添加抽象别名','添加抽象别名'])
-async def batch_add(msg: Message, text:str = ''):
+@bot.command(name='添加别名', aliases=['批量添加别名', '批量添加抽象别名', '添加抽象别名'])
+async def batch_add(msg: Message, text: str = ''):
     if not await check_perm(msg.author_id):
         return None
     text = text.split("-")
@@ -265,8 +277,8 @@ async def batch_add(msg: Message, text:str = ''):
         await msg.reply('用法: 添加别名 ID-别名1/别名2..')
 
 
-@bot.command(name='添加新歌', aliases=['添加最新最热','添加最旧最冷'])
-async def new_song(msg: Message, text:str = ''):
+@bot.command(name='添加新歌', aliases=['添加最新最热', '添加最旧最冷'])
+async def new_song(msg: Message, text: str = ''):
     if not await check_perm(msg.author_id):
         return None
 
@@ -278,8 +290,8 @@ async def new_song(msg: Message, text:str = ''):
         await msg.reply('用法: 添加新歌 ID-歌曲名')
 
 
-@bot.command(name='删除歌曲', aliases=['删歌','kohad'])
-async def del_song(msg: Message, text:str = ''):
+@bot.command(name='删除歌曲', aliases=['删歌', 'kohad'])
+async def del_song(msg: Message, text: str = ''):
     if not await check_perm(msg.author_id):
         return None
     await msg.reply(kohd(text))
@@ -294,7 +306,7 @@ async def upd_alias_list(msg: Message):
 
 
 @bot.command(name='查歌', aliases=['啥歌'])
-async def what_song(msg: Message, text:str = ''):
+async def what_song(msg: Message, text: str = ''):
     start_time = time.perf_counter()
     data = mai.total_alias_list.by_alias(text)
     if not data:
@@ -332,7 +344,7 @@ async def upgrade_rod(msg: Message):
     if not qqid:
         await msg.reply(NOT_BIND)
         return None
-    await msg.reply(await upgrade(str(qqid),"rod",""))
+    await msg.reply(await upgrade(str(qqid), "rod", ""))
 
 
 @bot.command(name='鱼塘开业', aliases=['鱼塘开门'])
@@ -349,14 +361,14 @@ async def reset_rod_cron():
 
 
 @bot.command(name='摸鱼伙伴加入', aliases=['钓鱼伙伴加入'])
-async def fish_partner(msg: Message, name:str = ''):
+async def fish_partner(msg: Message, name: str = ''):
     qqid = await check_bind(msg.author_id)
     if not qqid:
         await msg.reply(NOT_BIND)
         return None
     if not name:
         await msg.reply("用法: /摸鱼伙伴加入 <伙伴名>")
-    await msg.reply(await upgrade(str(qqid),"partner",name))
+    await msg.reply(await upgrade(str(qqid), "partner", name))
 
 
 @bot.command(name='鱼塘统计', aliases=['理塘统计'])
@@ -373,7 +385,7 @@ async def fish_monitor(msg: Message):
     await msg.reply(await fishstat())
 
 
-@bot.command(name='鱼塘喂食', aliases=['理塘喂食','鱼塘投食'])
+@bot.command(name='鱼塘喂食', aliases=['理塘喂食', '鱼塘投食'])
 async def feed_fish(msg: Message):
     if not await check_perm(msg.author_id):
         return None
@@ -389,16 +401,16 @@ async def feed_fish(msg: Message, args: str = ''):
     await msg.reply(await process(args))
 
 
-@bot.command(name='鱼塘规则怪谈', aliases=['鱼塘怪谈','鱼塘手册'])
+@bot.command(name='鱼塘规则怪谈', aliases=['鱼塘怪谈', '鱼塘手册'])
 async def ytgt(msg: Message):
-    #await msg.ctx.channel.send(yu_tang_guai_tan(), temp_target_id=msg.author.id)
+    # await msg.ctx.channel.send(yu_tang_guai_tan(), temp_target_id=msg.author.id)
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
                                   (await prepare_image(text_to_image(yu_tang_guai_tan())))))))
 
 
-@bot.command(name='鱼塘主规则怪谈', aliases=['鱼塘主怪谈','鱼塘主手册'])
+@bot.command(name='鱼塘主规则怪谈', aliases=['鱼塘主怪谈', '鱼塘主手册'])
 async def ytgt(msg: Message):
     if not await check_perm(msg.author_id):
         return None
@@ -431,7 +443,7 @@ async def mc_ping(msg: Message, args: str = ''):
             )))
 
 
-@bot.command(name='艾斯语录', aliases=['恶魔低语','虎狼之词','asyl'])
+@bot.command(name='艾斯语录', aliases=['恶魔低语', '虎狼之词', 'asyl'])
 async def asyl(msg: Message):
     await msg.reply(
         CardMessage(
@@ -467,7 +479,7 @@ async def pic_mao(msg: Message):
                                   ))))
 
 
-@bot.command(name='毛5', aliases=['毛毛星期五','兽装星期五'])
+@bot.command(name='毛5', aliases=['毛毛星期五', '兽装星期五'])
 async def pic_mao5(msg: Message):
     await msg.reply(
         CardMessage(
@@ -506,7 +518,7 @@ async def reset_tato_usage(msg: Message):
     await msg.reply(await reset_potato())
 
 
-@bot.command(name='苍穹变换器', aliases=['苍穹变换','刷新土豆日历'])
+@bot.command(name='苍穹变换器', aliases=['苍穹变换', '刷新土豆日历'])
 async def change_forecast(msg: Message):
     if not await check_perm(msg.author_id):
         return "你没有权限这样做"
@@ -518,7 +530,7 @@ async def potato_forecast(msg: Message):
     await msg.reply(await forecast())
 
 
-@bot.command(name='白薯统计', aliases=['土豆统计','育碧统计'])
+@bot.command(name='白薯统计', aliases=['土豆统计', '育碧统计'])
 async def potato_stat(msg: Message):
     qqid = await check_bind(msg.author_id)
     if not qqid:
@@ -536,7 +548,7 @@ async def harvest_potato(msg: Message):
     await msg.reply(await harvest(str(qqid)))
 
 
-@bot.command(name='强化土豆', aliases=['升级育碧','强化育碧','升级土豆'])
+@bot.command(name='强化土豆', aliases=['升级育碧', '强化育碧', '升级土豆'])
 async def potato_upgrade(msg: Message):
     qqid = await check_bind(msg.author_id)
     if not qqid:
@@ -544,7 +556,7 @@ async def potato_upgrade(msg: Message):
         return None
     a = await upgrade_potato(str(qqid))
     if a:
-        if len(a)<30:
+        if len(a) < 30:
             await msg.reply(a)
         else:
             await msg.reply(
@@ -554,7 +566,7 @@ async def potato_upgrade(msg: Message):
                                           ))))
 
 
-@bot.command(name='农场手册', aliases=['土豆怪谈','土豆规则怪谈','农场规则怪谈'])
+@bot.command(name='农场手册', aliases=['土豆怪谈', '土豆规则怪谈', '农场规则怪谈'])
 async def potato_guaitan(msg: Message):
     await msg.reply(
         CardMessage(
@@ -570,16 +582,17 @@ async def potato_guaitan2(msg: Message):
                                   (await prepare_image(text_to_image(tdz_guai_tan())))))))
 
 
-@bot.command(name='ping', aliases=['在','?'])
+@bot.command(name='ping', aliases=['在', '?'])
 async def get_ping(msg: Message):
     if not await check_perm(msg.author_id):
         await msg.reply("在!")
-        return
+        return None
     await botmarket_online()
+    await bot.client.update_listening_music("sølips", "rintaro soma", "cloudmusic")
     await msg.reply("在! BOT心跳包已发送!")
 
 
-@bot.command(name='/', aliases=['as','数字呆毛'])
+@bot.command(name='/', aliases=['as', '数字呆毛'])
 async def ahoge_ai(msg: Message, text: str = ''):
     if not await check_bind(msg.author_id):
         return
@@ -588,23 +601,74 @@ async def ahoge_ai(msg: Message, text: str = ''):
     await msg.reply(await openAI(text))
 
 
+@bot.command(name='whoami', aliases=['version', 'ver', 'status', 'os'])
+async def whoami(msg: Message):
+    if not await check_perm(msg.author_id):
+        return None
+    await msg.reply(
+        CardMessage(
+            Card(
+                Module.Header(f'{BOTNAME}'),
+                Module.Context(f'在金毛的服务器上持续稳定运行..'),
+                Module.Divider(),
+                Module.Context(Element.Text('处理器:' + str(psutil.cpu_percent(2)) + '% @' + str(
+                    round(psutil.cpu_freq().max / 1024, 2)) + 'GHz' + '\n内存:' + str(
+                    psutil.virtual_memory().percent) + '%'), Types.Text.KMD))))
 
-@bot.task.add_interval(minutes=28)
+
+@bot.command(name='答案之书', aliases=['boa', '答案'])
+async def book_of_answer(msg: Message):
+    if not await check_bind(msg.author_id):
+        return
+    if random.randint(1, 10) >= 3:
+        await msg.reply(await queryAnswer())
+    else:
+        await msg.reply("别整, 刺挠")
+
+
+@bot.command(name='毒鸡汤', aliases=['djt', '鸡汤来咯'])
+async def djt(msg: Message):
+    if not await check_bind(msg.author_id):
+        return
+    if random.randint(1, 10) >= 3:
+        await msg.reply(await queryDuJiTang())
+    else:
+        await msg.reply("别整, 刺挠")
+
+
+@bot.command(name='一言', aliases=['一言顶针'])
+async def yiyan(msg: Message):
+    if not await check_bind(msg.author_id):
+        return
+    if random.randint(1, 10) >= 3:
+        await msg.reply(await queryYiYan())
+    else:
+        await msg.reply("别整, 刺挠")
+
+
+@bot.command(name='KFC', aliases=['疯4', '疯狂星期四', '肯德基', '华莱士', 'kfc'])
+async def kfc(msg: Message):
+    if not await check_bind(msg.author_id):
+        return
+    if random.randint(1, 10) >= 3:
+        await msg.reply(await randomKFC())
+    else:
+        await msg.reply("建议亲去吃" + random.choice(['华莱士', '汉堡王', '比格披萨', '萨莉亚']))
+
+
+@bot.task.add_interval(minutes=20)
 async def botmarket_ping_task():
     api = "http://bot.gekj.net/api/v1/online.bot"
     headers = {'uuid': f"{bot_config['market_uuid']}"}
     async with aiohttp.ClientSession() as session:
         await session.post(api, headers=headers)
     Log.info(
-        f'[Botmarket] {datetime.strptime(str(int(time.time())), "%Y%m%d%H%M%S").strftime("%Y-%m-%d %H:%M:%S")} 刷新了在线状态')
+        f'[Botmarket] 刷新了在线状态')
 
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    #asyncio.run(preinit())
+    # asyncio.run(preinit())
     loop.create_task(preinit())
     asyncio.set_event_loop(loop)
     loop.run_until_complete(bot.run())
-    await bot.client.update_listening_music("sølips", "rintaro soma", "cloudmusic")
-    Log.info(
-        f'[Music] BOT初始化完成.')
