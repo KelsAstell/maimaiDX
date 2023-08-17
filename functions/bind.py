@@ -29,6 +29,7 @@ async def ban_reason(id):
     else:
         return "请咨询开发者获得详细封禁理由."
 
+
 async def set_username(kid: str, username: str):
     if str(kid) in kid_list:
         if kid_list[str(kid)]['id'] == username:

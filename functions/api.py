@@ -20,6 +20,7 @@ async def download_music_pictrue(id: Union[int, str]):
         if os.path.exists(file := os.path.join(static, 'mai', 'cover', f'{id}.png')):
             return file
         async with aiohttp.request('GET', f'https://www.diving-fish.com/covers/{id}.png', timeout=aiohttp.ClientTimeout(total=60)) as req:
+            Log.info(f'从水鱼获取了ID:{id}的封面, 正在尝试下载到本地.')
             if req.status == 200:
                 with open(os.path.join(static, 'mai', 'cover', f'{id}.png'), 'wb') as file:
                     file.write(await req.read())
@@ -55,7 +56,6 @@ async def botmarket_online():
     async with aiohttp.ClientSession() as session:
         await session.post(api, headers=headers)
     Log.info(f'[Botmarket] BOT ONLINE. Welcome to Maimai!')
-
 
 
 async def get_player_data(project: str, payload: dict):

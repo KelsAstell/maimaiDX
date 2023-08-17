@@ -1,19 +1,14 @@
-import asyncio
-import json
-import os
 import random
 from collections import namedtuple
 from copy import deepcopy
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import List, Optional, Tuple, Any
 
 import aiofiles
-import aiohttp
-from PIL import Image
 from numpy.core.defchararray import upper
 from pydantic import BaseModel, Field
-from functions.config import *
 
 from functions.api import *
+from functions.config import *
 from functions.log_utils import Log
 
 cover_dir = os.path.join(static, 'mai', 'cover')

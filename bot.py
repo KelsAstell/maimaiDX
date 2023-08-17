@@ -11,7 +11,8 @@ from functions.api import get_player_data, botmarket_online
 from functions.best_50 import UserInfo, DrawBest
 from functions.bind import check_bind, bind_qq, set_username, check_perm, ban_reason
 from functions.config import BOTNAME
-from functions.info import music_play_data, name_linked, rating_ranking_data, rating_pk, draw_music_info
+from functions.info import music_play_data, name_linked, rating_ranking_data, rating_pk, draw_music_info, \
+    solips_play_data
 from functions.music import mai
 from functions.random_reply import randomNotFound
 from plugins.aioAPI.libraries.random_reply import randomKFC
@@ -29,16 +30,36 @@ with open('./bot_config.json', 'r', encoding='utf-8') as f:
 NOT_BIND = "请使用**/bind <QQ号>**进行绑定"
 
 
+# init Bot
+bot = Bot(token=bot_config['token'])
+
+
 async def preinit():
     await mai.get_music()
     await mai.get_music_alias()
+    bot.command.update_prefixes('/', '、', '')
 
 
 async def prepare_image(pic):
     imgByteArr = io.BytesIO()
     pic = pic.convert('RGB')
-
     pic.save(imgByteArr, 'JPEG', optimize=True, quality=80, compress_level=5)
+    return await bot.client.create_asset(io.BytesIO(imgByteArr.getvalue()))
+
+
+async def prepare_gif(pic):
+    imgByteArr = io.BytesIO()
+    if pic.mode == 'RGB':
+        pic.save(imgByteArr, format='JPEG', optimize=True, quality=80, compress_level=5)
+    elif pic.mode == 'P':
+        pic = pic.convert('RGB')
+        pic.save(imgByteArr, format='JPEG', optimize=True, quality=80, compress_level=5)
+    elif pic.mode == 'RGBA' or pic.mode == 'LA':
+        pic = pic.convert('RGB')
+        pic.save(imgByteArr, format='JPEG', optimize=True, quality=80, compress_level=5)
+    else:
+        # Handle GIF images
+        pic.save(imgByteArr, format='GIF', optimize=True, quality=80, compress_level=5)
     return await bot.client.create_asset(io.BytesIO(imgByteArr.getvalue()))
 
 
@@ -94,10 +115,6 @@ async def best_50(user):
         return response['data']
 
 
-# init Bot
-bot = Bot(token=bot_config['token'])
-
-
 @bot.command(name='bind', aliases=['绑定', 'bindqq'])
 async def bind(msg: Message, qqid: int):
     uid = msg.author_id
@@ -109,11 +126,30 @@ async def bind(msg: Message, qqid: int):
                     Module.Context(f'封禁名单由{BOTNAME} / ELISA Bot开发组维护.'),
                     Module.Divider(),
                     Module.Header(f'封禁理由如下:'),
-                    Module.Context(Element.Text(await ban_reason(qqid)), Types.Text.KMD)
+                    Module.Context(Element.Text(await ban_reason(qqid))),color='#FF2400'
                 )))
         return None
     await msg.reply(await bind_qq(uid, qqid))
     Log.info(f'[绑定] {msg.author.nickname} 将QQ绑定为 {qqid}')
+
+
+@bot.command(name='cbind', aliases=['查绑定'])
+async def cbind(msg: Message):
+    qqid = await check_bind(msg.author_id)
+    if not qqid:
+        text = '还没有绑定捏, 请使用/bind <QQ号>进行绑定'
+    else:
+        text = f'已绑定QQ为{qqid}'
+    await msg.ctx.channel.send(CardMessage(
+        Card(
+            Module.Header(f'{msg.author.nickname}的绑定信息'),
+            Module.Context(f'本消息仅对你可见.'),
+            Module.Divider(),
+            Module.Header(f'绑定信息如下:'),
+            Module.Context(Element.Text(text)), color='#FFD700'
+        )), temp_target_id=msg.author.id)
+    Log.info(f'[绑定查询] {msg.author.nickname} 查询了绑定信息')
+    return None
 
 
 @bot.command(name='ib50', aliases=['b50', 'best50', 'best40', 'b40'])
@@ -129,7 +165,7 @@ async def b50(msg: Message, args: str = ''):
                         Module.Context(f'封禁名单由{BOTNAME} / ELISA Bot开发组维护.'),
                         Module.Divider(),
                         Module.Header(f'封禁理由如下:'),
-                        Module.Context(Element.Text(await ban_reason(args.lower())), Types.Text.KMD)
+                        Module.Context(Element.Text(await ban_reason(args.lower()))),color='#FF2400'
                     )))
             return None
         data = await best_50(args.lower())
@@ -150,12 +186,12 @@ async def b50(msg: Message, args: str = ''):
                 Module.Header(f'{data["name"]}的Best50数据'),
                 Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.'),
                 Module.Divider(),
-                Module.Container(Element.Image(data['url']))
+                Module.Container(Element.Image(data['url'])),color='#40E0D0'
             )))
     Log.info(f'[Best50] {msg.author.nickname} 生成了Best50数据, 耗时{eclipsed_time:.3f}秒')
 
 
-@bot.command(name='potato_info', aliases=['minfo'])
+@bot.command(name='info', aliases=['minfo'])
 async def music_info(msg: Message, args: str = ''):
     start_time = time.perf_counter()
     qqid = await check_bind(msg.author_id)
@@ -167,7 +203,7 @@ async def music_info(msg: Message, args: str = ''):
             return None
     else:
         await msg.reply("抓抓呆毛, " + random.choice(
-            ['你要查啥?', '你要查什么', '你要查what?']) + "\n命令格式：/potato_info <歌曲名/id/别名>")
+            ['你要查啥?', '你要查什么', '你要查what?']) + "\n命令格式：/info <歌曲名/id/别名>")
         return None
     if isinstance(data, str):
         await msg.reply(data)
@@ -186,6 +222,16 @@ async def music_info(msg: Message, args: str = ''):
     if data['sss']:
         await asyncio.sleep(3)
         await msg.reply(f"我超, {data['comment']}!")
+
+
+@bot.command(name='原神', aliases=['solips', '嗦梨进度', '🍐', '嗦嗦', '嗦'])
+async def solips_rating(msg: Message,text: str = ''):
+    qqid = await check_bind(msg.author_id)
+    if qqid:
+        await msg.reply(await solips_play_data({'qq': qqid}))
+        return None
+    else:
+        await msg.reply(NOT_BIND)
 
 
 @bot.command(name='rating', aliases=['rainfo', 'ra', '我有多菜', '他有多菜', '她有多菜'])
@@ -275,6 +321,15 @@ async def batch_add(msg: Message, text: str = ''):
         await mai.get_music_alias()
     else:
         await msg.reply('用法: 添加别名 ID-别名1/别名2..')
+
+
+@bot.command(name='初始化', aliases=['init'])
+async def init_maimai(msg: Message, text: str = ''):
+    if not await check_perm(msg.author_id):
+        await msg.reply('权限不足')
+        return None
+    await preinit()
+    await msg.reply('Finished.')
 
 
 @bot.command(name='添加新歌', aliases=['添加最新最热', '添加最旧最冷'])
@@ -447,27 +502,27 @@ async def mc_ping(msg: Message, args: str = ''):
 async def asyl(msg: Message):
     await msg.reply(
         CardMessage(
-            Card(Module.Container(Element.Image
-                                  (await prepare_image(await astell_words()))
-                                  ))))
+            Card(Module.Container(Element.Image(await prepare_image(await astell_words()))))))
 
 
 @bot.command(name='猫猫进度', aliases=['猫图'])
 async def pic_cat(msg: Message):
+    url = await bot.client.create_asset(open(await catcat(), 'rb'))
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
-                                  (await prepare_image(await catcat()))
-                                  ))))
+                                  (url,size=Types.Size.SM))
+                                  )))
 
 
 @bot.command(name='打乌蒙打的', aliases=['打舞萌打的', '打mai打的'])
 async def pic_mai(msg: Message):
+    url = await bot.client.create_asset(open(await iidx(), 'rb'))
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
-                                  (await prepare_image(await iidx()))
-                                  ))))
+                                  (url,size=Types.Size.SM))
+                                  )))
 
 
 @bot.command(name='看看毛', aliases=['看看福瑞', 'kkm'])
@@ -475,7 +530,7 @@ async def pic_mao(msg: Message):
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
-                                  (await prepare_image(await kkm()))
+                                  (await prepare_image(Image.open(await kkm())))
                                   ))))
 
 
@@ -484,7 +539,7 @@ async def pic_mao5(msg: Message):
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
-                                  (await prepare_image(await fursuitfriday()))
+                                  (await prepare_image(Image.open(await fursuitfriday())))
                                   ))))
 
 
@@ -493,7 +548,7 @@ async def pic_furcon(msg: Message, year: str = ''):
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
-                                  (await prepare_image(await furcon_pics(year)))
+                                  (await prepare_image(Image.open(await furcon_pics(year))))
                                   ))))
 
 
@@ -502,7 +557,7 @@ async def pic_personal(msg: Message, name: str = ''):
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
-                                  (await prepare_image(await furcon_pics_personal(name)))
+                                  (await prepare_image(Image.open(await furcon_pics_personal(name))))
                                   ))))
 
 
@@ -613,7 +668,7 @@ async def whoami(msg: Message):
                 Module.Divider(),
                 Module.Context(Element.Text('处理器:' + str(psutil.cpu_percent(2)) + '% @' + str(
                     round(psutil.cpu_freq().max / 1024, 2)) + 'GHz' + '\n内存:' + str(
-                    psutil.virtual_memory().percent) + '%'), Types.Text.KMD))))
+                    psutil.virtual_memory().percent) + '%')))))
 
 
 @bot.command(name='答案之书', aliases=['boa', '答案'])
