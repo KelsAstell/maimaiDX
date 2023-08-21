@@ -269,14 +269,14 @@ class DrawBest:
         self._im.alpha_composite(plate, (390, 100))
         icon = Image.open(os.path.join(self.maimai_dir, 'UI_Icon_309503.png')).resize((214, 214))
         self._im.alpha_composite(icon, (398, 108))
-        # if self.qqId:
-        #     try:
-        #         async with aiohttp.request('GET', f'http://q1.qlogo.cn/g?b=qq&nk={self.qqId}&s=100', timeout=aiohttp.ClientTimeout(total=2)) as resp:
-        #             qqLogo = Image.open(io.BytesIO(await resp.read()))
-        #         self._im.alpha_composite(Image.new('RGBA', (203, 203), (255, 255, 255, 255)), (404, 114))
-        #         self._im.alpha_composite(qqLogo.convert('RGBA').resize((201, 201)), (405, 115))
-        #     except Exception:
-        #         pass
+        if self.qqId:
+            try:
+                async with aiohttp.request('GET', f'http://q1.qlogo.cn/g?b=qq&nk={self.qqId}&s=100', timeout=aiohttp.ClientTimeout(total=2)) as resp:
+                    qqLogo = Image.open(io.BytesIO(await resp.read()))
+                self._im.alpha_composite(Image.new('RGBA', (203, 203), (255, 255, 255, 255)), (404, 114))
+                self._im.alpha_composite(qqLogo.convert('RGBA').resize((201, 201)), (405, 115))
+            except Exception:
+                pass
         self._im.alpha_composite(dx_rating, (620, 122))
         Rating = f'{self.Rating:05d}'
         if self.qqId == 484894005:

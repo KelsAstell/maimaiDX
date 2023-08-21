@@ -1,22 +1,28 @@
+import asyncio
 import io
 import time
-
 import aiohttp
 import psutil
+import pytz
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from khl import Bot, Message
 from khl.card import CardMessage, Card, Module, Element, Types
+from khl.command import Rule
 
-from functions.alias_utils import updateAlias, su_batch_add_alias, merge_remote_alias, kohd, su_add_new
-from functions.api import get_player_data, botmarket_online
-from functions.best_50 import UserInfo, DrawBest
-from functions.bind import check_bind, bind_qq, set_username, check_perm, ban_reason
-from functions.config import BOTNAME
-from functions.info import music_play_data, name_linked, rating_ranking_data, rating_pk, draw_music_info, \
-    solips_play_data
+# from functions.api import get_player_data, botmarket_online
+# from functions.best_50 import UserInfo, DrawBest
+# from functions.bind import check_bind, bind_qq, set_username, check_perm, ban_reason
+# from functions.alias_utils import updateAlias, su_batch_add_alias, merge_remote_alias, kohd, su_add_new
+# from functions.config import BOTNAME
+# from functions.info import music_play_data, name_linked, rating_ranking_data, rating_pk, draw_music_info, \
+#     solips_play_data
+from functions.bind import *
+from functions.alias_utils import *
+from functions.info import *
 from functions.music import mai
 from functions.random_reply import randomNotFound
 from plugins.aioAPI.libraries.random_reply import randomKFC
-from plugins.aioAPI.libraries.utils import queryAnswer, queryDuJiTang, queryYiYan
+from plugins.aioAPI.libraries.utils import *
 from plugins.fish.libraries.fish_utils import *
 from plugins.mcping.libraries.info import mcinfo, mcinfo_min
 from plugins.mcping.libraries.remote import say, execute
@@ -27,8 +33,9 @@ from plugins.randompic.randompic import *
 
 with open('./bot_config.json', 'r', encoding='utf-8') as f:
     bot_config = json.load(f)
-NOT_BIND = "请使用**/bind <QQ号>**进行绑定"
+NOT_BIND = "请使用**bind <QQ号>**进行绑定"
 
+scheduler = AsyncIOScheduler(timezone=pytz.utc)
 
 # init Bot
 bot = Bot(token=bot_config['token'])
@@ -37,7 +44,7 @@ bot = Bot(token=bot_config['token'])
 async def preinit():
     await mai.get_music()
     await mai.get_music_alias()
-    bot.command.update_prefixes('/', '、', '')
+    bot.command.update_prefixes('')
 
 
 async def prepare_image(pic):
@@ -104,7 +111,10 @@ async def best_50(user):
     if response['success']:
         obj = response['data']
         mai_info = UserInfo(**obj)
-        draw_best = DrawBest(mai_info)
+        if isinstance(user, int):
+            draw_best = DrawBest(mai_info, user)
+        else:
+            draw_best = DrawBest(mai_info)
         pic = await draw_best.draw()
         # pic.show()
         new_size = (round(pic.width / 2), round(pic.height / 2))
@@ -134,10 +144,16 @@ async def bind(msg: Message, qqid: int):
 
 
 @bot.command(name='cbind', aliases=['查绑定'])
-async def cbind(msg: Message):
-    qqid = await check_bind(msg.author_id)
+async def cbind(msg: Message, args: str = ''):
+    if msg.extra['mention']:
+        if await check_perm(msg.author_id):
+            qqid = await check_bind(msg.extra['mention'][0])
+        else:
+            qqid = await check_bind(msg.author_id)
+    else:
+        qqid = await check_bind(msg.author_id)
     if not qqid:
-        text = '还没有绑定捏, 请使用/bind <QQ号>进行绑定'
+        text = f'还没有绑定捏, {NOT_BIND}'
     else:
         text = f'已绑定QQ为{qqid}'
     await msg.ctx.channel.send(CardMessage(
@@ -152,11 +168,16 @@ async def cbind(msg: Message):
     return None
 
 
-@bot.command(name='ib50', aliases=['b50', 'best50', 'best40', 'b40'])
+@bot.command(name='ib50', aliases=['b50', 'best50', 'best40', 'b40'],case_sensitive=False)
 async def b50(msg: Message, args: str = ''):
     start_time = time.perf_counter()
-    qqid = await check_bind(msg.author_id)
-    if args:
+    if msg.extra['mention']:
+        qqid = await check_bind(msg.extra['mention'][0])
+        # await msg.reply(f"kookID{msg.extra['mention'][0]}查询了{qqid}.")
+        # return None
+    else:
+        qqid = await check_bind(msg.author_id)
+    if args and not qqid:
         if args.lower() in bot_config['user']['blacklist']:
             await msg.reply(
                 CardMessage(
@@ -172,7 +193,7 @@ async def b50(msg: Message, args: str = ''):
     elif qqid:
         data = await best_50(qqid)
     else:
-        await msg.reply('请使用/bind <QQ号>进行绑定')
+        await msg.reply(NOT_BIND)
         return None
     if isinstance(data, str):
         await msg.reply(data)
@@ -191,10 +212,13 @@ async def b50(msg: Message, args: str = ''):
     Log.info(f'[Best50] {msg.author.nickname} 生成了Best50数据, 耗时{eclipsed_time:.3f}秒')
 
 
-@bot.command(name='info', aliases=['minfo'])
-async def music_info(msg: Message, args: str = ''):
+@bot.command(name='info', aliases=['minfo'] ,case_sensitive=False)
+async def music_info(msg: Message, args: str = '', at: str = ''):
     start_time = time.perf_counter()
-    qqid = await check_bind(msg.author_id)
+    if msg.extra['mention']:
+        qqid = await check_bind(msg.extra['mention'][0])
+    else:
+        qqid = await check_bind(msg.author_id)
     if args:
         if qqid:
             data = await info(qqid, args)
@@ -203,7 +227,7 @@ async def music_info(msg: Message, args: str = ''):
             return None
     else:
         await msg.reply("抓抓呆毛, " + random.choice(
-            ['你要查啥?', '你要查什么', '你要查what?']) + "\n命令格式：/info <歌曲名/id/别名>")
+            ['你要查啥?', '你要查什么', '你要查what?']) + "\n命令格式：info <歌曲名/id/别名>")
         return None
     if isinstance(data, str):
         await msg.reply(data)
@@ -643,9 +667,17 @@ async def get_ping(msg: Message):
         await msg.reply("在!")
         return None
     await botmarket_online()
-    await bot.client.update_listening_music("sølips", "rintaro soma", "cloudmusic")
     await msg.reply("在! BOT心跳包已发送!")
 
+
+@bot.command(name='换歌', aliases=['换首歌', '切歌'])
+async def change_music(msg: Message, song_name: str = '恶魔狼の作战记录💓-大以巴狼艾斯'):
+    if not await check_perm(msg.author_id):
+        return "你没有权限这样做"
+    songs_info = song_name.split("-")
+    await bot.client.update_listening_music(songs_info[0], songs_info[1], "cloudmusic")
+    await msg.reply(f"正在听 {songs_info[1]} 创作的 {songs_info[0]}")
+    
 
 @bot.command(name='/', aliases=['as', '数字呆毛'])
 async def ahoge_ai(msg: Message, text: str = ''):
@@ -705,10 +737,10 @@ async def yiyan(msg: Message):
 async def kfc(msg: Message):
     if not await check_bind(msg.author_id):
         return
-    if random.randint(1, 10) >= 3:
+    if random.randint(1, 10) >= 4:
         await msg.reply(await randomKFC())
     else:
-        await msg.reply("建议亲去吃" + random.choice(['华莱士', '汉堡王', '比格披萨', '萨莉亚']))
+        await msg.reply("建议去吃" + random.choice(['华莱士', '汉堡王', '比格披萨', '萨莉亚', '米村拌饭', '熊喵来了']) + "捏.")
 
 
 @bot.task.add_interval(minutes=20)
@@ -723,7 +755,6 @@ async def botmarket_ping_task():
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
-    # asyncio.run(preinit())
     loop.create_task(preinit())
     asyncio.set_event_loop(loop)
     loop.run_until_complete(bot.run())
