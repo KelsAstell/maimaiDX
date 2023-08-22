@@ -6,6 +6,8 @@ BOTNAME = NICKNAME + ' BOT ' + INNER_VER if isinstance(NICKNAME, str) else list(
 
 #static = "D:\\maimaiDX\\static\\"
 static = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'static')
+ratingdir = os.path.join(static, 'mai', 'rating')
+maimaidir = os.path.join(static, 'mai', 'pic')
 
 ADMIN = ['1583400271']
 

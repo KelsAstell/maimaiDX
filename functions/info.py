@@ -1,8 +1,9 @@
 from re import Match
+from typing import Dict
 
 from .best_50 import *
 from .api import *
-from .music import Music, download_music_pictrue, mai
+from .music import Music, download_music_pictrue, mai, RaMusic
 from .random_reply import *
 
 with open(os.path.join(static,'abstract_reply.json'), 'r', encoding='utf-8') as f:
@@ -192,6 +193,7 @@ async def music_play_data(payload: dict, songs: str):
     else:
         comment = ''
     return {"sss":sss,"msg":im,"comment":comment}
+
 
 
 async def query_chart_data(match: Match) -> str:

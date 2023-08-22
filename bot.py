@@ -21,6 +21,7 @@ from functions.alias_utils import *
 from functions.info import *
 from functions.music import mai
 from functions.random_reply import randomNotFound
+from functions.rating_list import update_rating_table, rating_table_draw
 from plugins.aioAPI.libraries.random_reply import randomKFC
 from plugins.aioAPI.libraries.utils import *
 from plugins.fish.libraries.fish_utils import *
@@ -136,7 +137,7 @@ async def bind(msg: Message, qqid: int):
                     Module.Context(f'封禁名单由{BOTNAME} / ELISA Bot开发组维护.'),
                     Module.Divider(),
                     Module.Header(f'封禁理由如下:'),
-                    Module.Context(Element.Text(await ban_reason(qqid))),color='#FF2400'
+                    Module.Context(Element.Text(await ban_reason(qqid))), color='#FF2400'
                 )))
         return None
     await msg.reply(await bind_qq(uid, qqid))
@@ -168,7 +169,7 @@ async def cbind(msg: Message, args: str = ''):
     return None
 
 
-@bot.command(name='ib50', aliases=['b50', 'best50', 'best40', 'b40'],case_sensitive=False)
+@bot.command(name='ib50', aliases=['b50', 'best50', 'best40', 'b40'], case_sensitive=False)
 async def b50(msg: Message, args: str = ''):
     start_time = time.perf_counter()
     if msg.extra['mention']:
@@ -186,7 +187,7 @@ async def b50(msg: Message, args: str = ''):
                         Module.Context(f'封禁名单由{BOTNAME} / ELISA Bot开发组维护.'),
                         Module.Divider(),
                         Module.Header(f'封禁理由如下:'),
-                        Module.Context(Element.Text(await ban_reason(args.lower()))),color='#FF2400'
+                        Module.Context(Element.Text(await ban_reason(args.lower()))), color='#FF2400'
                     )))
             return None
         data = await best_50(args.lower())
@@ -207,12 +208,12 @@ async def b50(msg: Message, args: str = ''):
                 Module.Header(f'{data["name"]}的Best50数据'),
                 Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.'),
                 Module.Divider(),
-                Module.Container(Element.Image(data['url'])),color='#40E0D0'
+                Module.Container(Element.Image(data['url'])), color='#40E0D0'
             )))
     Log.info(f'[Best50] {msg.author.nickname} 生成了Best50数据, 耗时{eclipsed_time:.3f}秒')
 
 
-@bot.command(name='info', aliases=['minfo'] ,case_sensitive=False)
+@bot.command(name='info', aliases=['minfo'], case_sensitive=False)
 async def music_info(msg: Message, args: str = '', at: str = ''):
     start_time = time.perf_counter()
     if msg.extra['mention']:
@@ -249,7 +250,7 @@ async def music_info(msg: Message, args: str = '', at: str = ''):
 
 
 @bot.command(name='原神', aliases=['solips', '嗦梨进度', '🍐', '嗦嗦', '嗦'])
-async def solips_rating(msg: Message,text: str = ''):
+async def solips_rating(msg: Message, text: str = ''):
     qqid = await check_bind(msg.author_id)
     if qqid:
         await msg.reply(await solips_play_data({'qq': qqid}))
@@ -290,17 +291,17 @@ async def rapk(msg: Message, name1: str = '', name2: str = ''):
                 await msg.reply(data)
                 return None
             else:
-                await msg.reply('请使用**/b50**查询一次自己的成绩完成初始化')
+                await msg.reply('请使用**b50**查询一次自己的成绩完成初始化')
         return None
     else:
         await msg.reply(
             CardMessage(
                 Card(
-                    Module.Header(f'指令帮助 - /rapk'),
+                    Module.Header(f'指令帮助 - rapk'),
                     Module.Context(f'这个指令比较复杂, 请按照以下说明操作EmoBot.'),
                     Module.Divider(),
                     Module.Container(Element.Text('```用法：'
-                                                  '/rapk <玩家1> [玩家2]\n'
+                                                  'rapk <玩家1> [玩家2]\n'
                                                   '如果玩家2为空, 则与发送本指令的玩家进行PK'
                                                   '执行本命令前, 至少需要查询过一次自己的best50成绩```'))
                 )))
@@ -321,6 +322,60 @@ async def update_name(msg: Message, text: str = ''):
         await mai.get_music_alias()
     else:
         await msg.reply('用法: 更改歌曲名称 ID-名字')
+
+
+@bot.command(name='更新定数表', aliases=['更新定数', 'dsupd'])
+async def ds_update(msg: Message):
+    if not await check_perm(msg.author_id):
+        await msg.reply('你没有权限这样做.')
+        return None
+    await msg.reply(await update_rating_table())
+
+
+@bot.command(name='dslist', aliases=['定数', 'ds', '定数表'], case_sensitive=False)
+async def dslist(msg: Message, args: str = ''):
+    if args in levelList[:5]:
+        await msg.reply('只支持查询Lv6到Lv15的定数表')
+    elif args in levelList[5:]:
+        if args in levelList[-3:]:
+            img = os.path.join(ratingdir, '14.png')
+        else:
+            img = os.path.join(ratingdir, f'{args}.png')
+        url = await prepare_image(open(img, 'rb'))
+        await msg.reply(
+            CardMessage(
+                Card(Module.Header(f'{args}完成表'),
+                     Module.Context(f'由{BOTNAME} 生成.'),
+                     Module.Divider(),
+                     Module.Container(Element.Image(url))
+                     )))
+    else:
+        await msg.reply('用法: **定数表 11+**')
+
+
+@bot.command(name='wclist', aliases=['完成', 'wcb', '完成表'], case_sensitive=False)
+async def wclist(msg: Message, args: str = ''):
+    start_time = time.perf_counter()
+    if msg.extra['mention']:
+        qqid = await check_bind(msg.extra['mention'][0])
+    else:
+        qqid = await check_bind(msg.author_id)
+    if not qqid:
+        await msg.reply(NOT_BIND)
+        return None
+    if args in levelList[:5]:
+        await msg.reply('只支持查询Lv6到Lv15的完成表')
+    elif args in levelList[5:]:
+        url = await prepare_image(await rating_table_draw({'qq': qqid}, args))
+        eclipsed_time = time.perf_counter() - start_time
+        await msg.reply(
+            CardMessage(
+                Card(Module.Header(f'{args}完成表'),
+                     Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.'),
+                     Module.Divider(),
+                     Module.Container(Element.Image(url)))))
+    else:
+        await msg.reply('用法: **完成表 11+**')
 
 
 @bot.command(name='删除别名', aliases=['批量删除别名', '批量删除抽象别名', '删除抽象别名'])
@@ -446,7 +501,7 @@ async def fish_partner(msg: Message, name: str = ''):
         await msg.reply(NOT_BIND)
         return None
     if not name:
-        await msg.reply("用法: /摸鱼伙伴加入 <伙伴名>")
+        await msg.reply("用法: 摸鱼伙伴加入 <伙伴名>")
     await msg.reply(await upgrade(str(qqid), "partner", name))
 
 
@@ -476,7 +531,7 @@ async def feed_fish(msg: Message, args: str = ''):
     if not await check_perm(msg.author_id):
         return None
     if not args:
-        await msg.reply("用法: /鱼塘进货 <xx只xx块的xx>")
+        await msg.reply("用法: 鱼塘进货 <xx只xx块的xx>")
     await msg.reply(await process(args))
 
 
@@ -535,8 +590,8 @@ async def pic_cat(msg: Message):
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
-                                  (url,size=Types.Size.SM))
-                                  )))
+                                  (url, size=Types.Size.SM))
+                 )))
 
 
 @bot.command(name='打乌蒙打的', aliases=['打舞萌打的', '打mai打的'])
@@ -545,8 +600,8 @@ async def pic_mai(msg: Message):
     await msg.reply(
         CardMessage(
             Card(Module.Container(Element.Image
-                                  (url,size=Types.Size.SM))
-                                  )))
+                                  (url, size=Types.Size.SM))
+                 )))
 
 
 @bot.command(name='看看毛', aliases=['看看福瑞', 'kkm'])
@@ -677,7 +732,7 @@ async def change_music(msg: Message, song_name: str = '恶魔狼の作战记录�
     songs_info = song_name.split("-")
     await bot.client.update_listening_music(songs_info[0], songs_info[1], "cloudmusic")
     await msg.reply(f"正在听 {songs_info[1]} 创作的 {songs_info[0]}")
-    
+
 
 @bot.command(name='/', aliases=['as', '数字呆毛'])
 async def ahoge_ai(msg: Message, text: str = ''):
@@ -740,7 +795,8 @@ async def kfc(msg: Message):
     if random.randint(1, 10) >= 4:
         await msg.reply(await randomKFC())
     else:
-        await msg.reply("建议去吃" + random.choice(['华莱士', '汉堡王', '比格披萨', '萨莉亚', '米村拌饭', '熊喵来了']) + "捏.")
+        await msg.reply(
+            "建议去吃" + random.choice(['华莱士', '汉堡王', '比格披萨', '萨莉亚', '米村拌饭', '熊喵来了']) + "捏.")
 
 
 @bot.task.add_interval(minutes=20)

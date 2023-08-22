@@ -1,6 +1,5 @@
 import io
 import math
-import os
 import random
 from typing import List, Optional, Tuple, Union
 
@@ -179,7 +178,7 @@ class DrawBest:
 
     async def whiledraw(self, data: List[ChartInfo], type: bool):
         # y为第一排纵向坐标，dy为各排间距
-
+        x = 0
         y = 430 if type else 1670
         dy = 170
 

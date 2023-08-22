@@ -1,7 +1,7 @@
 import random
 from collections import namedtuple
 from copy import deepcopy
-from typing import List, Optional, Tuple, Any
+from typing import List, Optional, Tuple, Any, Dict
 
 import aiofiles
 from numpy.core.defchararray import upper
@@ -11,6 +11,8 @@ from functions.api import *
 from functions.config import *
 from functions.log_utils import Log
 
+levelList = ['1', '2', '3', '4', '5', '6', '7', '7+', '8', '8+', '9', '9+', '10', '10+', '11', '11+', '12', '12+', '13',
+             '13+', '14', '14+', '15']
 cover_dir = os.path.join(static, 'mai', 'cover')
 
 
@@ -104,6 +106,13 @@ class Music(BaseModel):
     diff: Optional[List[int]] = []
 
 
+class RaMusic(BaseModel):
+    id: str
+    ds: float
+    lv: str
+    type: str
+
+
 class MusicList(List[Music]):
     
     def by_id(self, music_id: str) -> Optional[Music]:
@@ -117,6 +126,38 @@ class MusicList(List[Music]):
             if music.title == music_title:
                 return music
         return None
+
+    def by_level(self, level: Union[str, List[str]], byid: bool = False) -> Optional[Union[List[Music], List[str]]]:
+        levelList = []
+        if isinstance(level, str):
+            levelList = [music.id if byid else music for music in self if level in music.level]
+        else:
+            levelList = [music.id if byid else music for music in self for lv in level if lv in music.level]
+        return levelList
+
+    def lvList(self, rating: bool = False) -> Dict[str, Dict[str, Union[List[Music], List[RaMusic]]]]:
+        level = {}
+        for lv in levelList:
+            if lv == '15':
+                r = range(1)
+            elif lv in levelList[:6]:
+                r = range(9, -1, -1)
+            elif '+' in lv:
+                r = range(9, 6, -1)
+            else:
+                r = range(6, -1, -1)
+            levellist = {f'{lv if "+" not in lv else lv[:-1]}.{_}': [] for _ in r}
+            musiclist = self.by_level(lv)
+            for music in musiclist:
+                for diff, ds in enumerate(music.ds):
+                    if str(ds) in levellist:
+                        if rating:
+                            levellist[str(ds)].append(RaMusic(id=music.id, ds=ds, lv=str(diff), type=music.type))
+                        else:
+                            levellist[str(ds)].append(music)
+            level[lv] = levellist
+
+        return level
 
     def random(self):
         return random.choice(self)
