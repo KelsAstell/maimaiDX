@@ -9,6 +9,7 @@ from khl import Bot, Message
 from khl.card import CardMessage, Card, Module, Element, Types
 from khl.command import Rule
 
+import functions.config
 # from functions.api import get_player_data, botmarket_online
 # from functions.best_50 import UserInfo, DrawBest
 # from functions.bind import check_bind, bind_qq, set_username, check_perm, ban_reason
@@ -19,7 +20,7 @@ from khl.command import Rule
 from functions.bind import *
 from functions.alias_utils import *
 from functions.info import *
-from functions.music import mai
+from functions.music import mai, update_music_list
 from functions.random_reply import randomNotFound
 from functions.rating_list import update_rating_table, rating_table_draw
 from plugins.aioAPI.libraries.random_reply import randomKFC
@@ -51,7 +52,7 @@ async def preinit():
 async def prepare_image(pic):
     imgByteArr = io.BytesIO()
     pic = pic.convert('RGB')
-    pic.save(imgByteArr, 'JPEG', optimize=True, quality=80, compress_level=5)
+    pic.save(imgByteArr, 'JPEG', optimize=True, quality=80, compress_level=3)
     return await bot.client.create_asset(io.BytesIO(imgByteArr.getvalue()))
 
 
@@ -73,6 +74,7 @@ async def prepare_gif(pic):
 
 async def info(qqid, args):
     payload = {}
+    song_alias = []
     if isinstance(qqid, int):
         payload = {'qq': qqid}
     elif isinstance(qqid, str):
@@ -82,21 +84,24 @@ async def info(qqid, args):
     elif by_t := mai.total_list.by_title(args):
         song_id = by_t.id
     else:
-        alias = mai.total_alias_list.by_alias(args)
-        if not alias:
+        query = mai.total_alias_list.by_alias(args)
+        if not query:
             return "找不到拥有这个别名的歌曲"
-        elif len(alias) != 1:
+        elif len(query) != 1:
             msg = f'找到相同别名的曲目，请使用以下ID查询：\n'
-            for songs in alias:
+            for songs in query:
                 msg += f'{songs.ID}：{songs.Name}\n'
             return msg
         else:
-            song_id = str(alias[0].ID)
+            song_id = str(query[0].ID)
+            song_alias = mai.total_alias_list.from_id(song_id)[0]
+            random.shuffle(song_alias)
     play_data = await music_play_data(payload, song_id)
     pic = play_data["msg"]
     # pic.show()
     img_url = await prepare_image(pic)
-    return {'url': img_url, 'sss': play_data['sss'], 'comment': play_data['comment']}
+    return {'url': img_url, 'sss': play_data['sss'], 'comment': play_data['comment'],'song_name': play_data["song_name"],
+            'alias':song_alias[:5]}
 
 
 async def best_50(user):
@@ -116,12 +121,21 @@ async def best_50(user):
             draw_best = DrawBest(mai_info, user)
         else:
             draw_best = DrawBest(mai_info)
-        pic = await draw_best.draw()
+        b50_data = await draw_best.draw()
+        pic = b50_data['image']
+        rating = b50_data['rating']
+        rank = 1
+        with open(os.path.join(functions.config.static, "rank_data.json"), 'r', encoding='utf-8') as dt0:
+            ra_list = json.load(dt0)
+        for records in ra_list:
+            if records['ra'] > int(rating):
+                rank += 1
+        rank_percent = round((rank / len(ra_list)) * 100, 2)
         # pic.show()
-        new_size = (round(pic.width / 2), round(pic.height / 2))
+        new_size = (round(pic.width * 0.75), round(pic.height * 0.75))
         pic = pic.resize(new_size)
         img_url = await prepare_image(pic)
-        return {'name': obj['username'], 'url': img_url}
+        return {'name': obj['username'], 'url': img_url, 'ra':[rank, rank_percent]}
     else:
         return response['data']
 
@@ -206,6 +220,7 @@ async def b50(msg: Message, args: str = ''):
         CardMessage(
             Card(
                 Module.Header(f'{data["name"]}的Best50数据'),
+                Module.Header(f'排名: {data["ra"][0]}, 超过了 {data["ra"][1]}% 的玩家.'),
                 Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.'),
                 Module.Divider(),
                 Module.Container(Element.Image(data['url'])), color='#40E0D0'
@@ -234,14 +249,17 @@ async def music_info(msg: Message, args: str = '', at: str = ''):
         await msg.reply(data)
         Log.info(f'[MusicInfo] {msg.author.nickname} 生成了单曲数据, 但{data}.')
         return None
+    alias_text = ' / '.join(str(element) for element in data['alias'])
     eclipsed_time = time.perf_counter() - start_time
     await msg.reply(
         CardMessage(
             Card(
-                Module.Header(f'单曲游玩数据'),
-                Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.'),
+                Module.Header(f'单曲游玩数据 - {data["song_name"]}'),
+                Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.\n点击 [展开更多] 查看该歌曲的别名.'),
                 Module.Divider(),
-                Module.Container(Element.Image(data['url']))
+                Module.Container(Element.Image(data['url'])),
+                Module.Divider(),
+                Module.Context(Element.Text("该曲目的其他别名有:\n" + alias_text + " 等")), color='#40E0D0'
             )))
     Log.info(f'[MusicInfo] {msg.author.nickname} 生成了单曲数据, 耗时{eclipsed_time:.3f}秒')
     if data['sss']:
@@ -432,11 +450,38 @@ async def del_song(msg: Message, text: str = ''):
     await mai.get_music_alias()
 
 
-@bot.command(name='同步别名库', aliases=['更新别名库'])
+@bot.command(name='同步别名库', aliases=['联网更新别名库'])
 async def upd_alias_list(msg: Message):
     if not await check_perm(msg.author_id):
         return None
-    await msg.reply(await merge_remote_alias())
+    start_time = time.perf_counter()
+    text = await merge_remote_alias()
+    eclipsed_time = time.perf_counter() - start_time
+    await msg.reply(
+        CardMessage(
+            Card(
+                Module.Header(f'别名库更新结果'),
+                Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内完成.'),
+                Module.Divider(),
+                Module.Context(text)
+            )))
+
+
+@bot.command(name='同步乐曲库', aliases=['联网更新乐曲库'])
+async def upd_music_list(msg: Message):
+    if not await check_perm(msg.author_id):
+        return None
+    start_time = time.perf_counter()
+    text = await update_music_list()
+    eclipsed_time = time.perf_counter() - start_time
+    await msg.reply(
+        CardMessage(
+            Card(
+                Module.Header(f'乐曲库更新结果'),
+                Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内完成.'),
+                Module.Divider(),
+                Module.Context(text)
+            )))
 
 
 @bot.command(name='查歌', aliases=['啥歌'])
@@ -445,6 +490,7 @@ async def what_song(msg: Message, text: str = ''):
     data = mai.total_alias_list.by_alias(text)
     if not data:
         await msg.reply(randomNotFound())
+        return None
     if len(data) != 1:
         text = f'找到{len(data)}个相同别名的曲目：\n'
         for songs in data:

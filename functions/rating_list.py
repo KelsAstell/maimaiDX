@@ -98,20 +98,21 @@ async def rating_table_draw(payload: dict, args: str):
     data = await get_player_data('plate', payload)
     if isinstance(data, str):
         return data
-
+    #print(data['data']['verlist'])
     if args in levelList[-3:]:
         bg = os.path.join(ratingdir, '14.png')
         ralist = levelList[-3:]
     else:
         bg = os.path.join(ratingdir, f'{args}.png')
         ralist = [args]
-
+    dataset = list(data['data']['verlist'])
     fromid = {}
-    for _data in data['data']['verlist']:
+    for _data in dataset:
         if _data['level'] in ralist:
-            if (music_id := str(_data['id'])) not in fromid:
-                fromid[music_id] = {}
-            fromid[music_id][str(_data['level_index'])] = {
+            music_id = str(_data['id'])
+            if music_id not in fromid:
+                fromid[str(music_id)] = {}
+            fromid[str(music_id)][str(_data['level_index'])] = {
                 'achievements': _data['achievements'],
                 'level': _data['level']
             }

@@ -1,3 +1,4 @@
+import time
 from re import Match
 from typing import Dict
 
@@ -192,7 +193,7 @@ async def music_play_data(payload: dict, songs: str):
         comment = random.choice(abstract_list[str(songs)])
     else:
         comment = ''
-    return {"sss":sss,"msg":im,"comment":comment}
+    return {"sss":sss,"msg":im,"comment":comment,"song_name":music.title}
 
 
 
@@ -585,7 +586,9 @@ async def rating_ranking_data(name: Optional[str], page: Optional[int]):
         return rank_data
 
     sorted_rank_data = sorted(rank_data, key=lambda r: r['ra'], reverse=True)
-    
+    json_str = json.dumps(sorted_rank_data, indent=4, ensure_ascii=False)
+    with open(os.path.join(static, 'rank_data.json'), 'w', encoding='utf-8') as json_file:
+        json_file.write(json_str)
     if name:
         if name in [r['username'].lower() for r in sorted_rank_data]:
             rank_index = [r['username'].lower() for r in sorted_rank_data].index(name) + 1

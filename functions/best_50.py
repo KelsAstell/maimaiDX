@@ -278,8 +278,8 @@ class DrawBest:
                 pass
         self._im.alpha_composite(dx_rating, (620, 122))
         Rating = f'{self.Rating:05d}'
-        if self.qqId == 484894005:
-            Rating = '23333'
+        # if self.qqId == 484894005:
+        #     Rating = '23333'
         for n, i in enumerate(Rating):
             self._im.alpha_composite(
                 Image.open(os.path.join(self.maimai_dir, f'UI_NUM_Drating_{i}.png')).resize((20, 26)),
@@ -313,7 +313,7 @@ class DrawBest:
                 Image.open(os.path.join(self.maimai_dir, f'UI_NUM_Drating_{i}.png')).resize((20, 26)),
                 (763 + 23 * n, 50))
 
-        return self._im
+        return {'image': self._im, 'rating':Rating}
 
 
 def dxScore(dx: int) -> Tuple[int, int]:

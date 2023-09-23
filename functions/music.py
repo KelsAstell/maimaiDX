@@ -258,7 +258,14 @@ class AliasList(List[Alias]):
             if music.ID == int(music_id):
                 alias_list.append(music)
         return alias_list
-    
+
+    def from_id(self, music_id: int):
+        alias_list = []
+        for music in self:
+            if music.ID == int(music_id):
+                alias_list.append(music.Alias)
+        return alias_list
+
     def by_alias(self, music_alias: str) -> Optional[List[Alias]]:
         alias_list = []
         for music in self:
@@ -327,6 +334,42 @@ async def get_music_list() -> MusicList:
     return total_list
 
 
+async def update_music_list():
+    """
+    获取所有数据
+    """
+    try:
+        async with aiohttp.request('GET', 'https://www.diving-fish.com/api/maimaidxprober/music_data', timeout=aiohttp.ClientTimeout(total=30)) as obj_data:
+            if obj_data.status != 200:
+                print('[更新] 曲目数据更新失败，请检查网络环境。')
+                text = '曲目数据更新失败\n'
+            else:
+                data = await obj_data.json()
+                async with aiofiles.open(os.path.join(static, 'music_data.json'), 'w', encoding='utf-8') as f:
+                    await f.write(json.dumps(data, ensure_ascii=False, indent=4))
+                print('曲目数据更新完成')
+                text = '曲目数据更新完成\n'
+    except Exception:
+        text = '曲目数据更新失败\n'
+        print(f"Error:{traceback.format_exc()}")
+    try:
+        async with aiohttp.request('GET', 'https://www.diving-fish.com/api/maimaidxprober/chart_stats', timeout=aiohttp.ClientTimeout(total=30)) as obj_stats:
+            if obj_stats.status != 200:
+                print('[更新] 统计数据获取错误，请检查网络环境。')
+                text = text + '统计数据更新失败\n'
+            else:
+                stats = await obj_stats.json()
+                async with aiofiles.open(os.path.join(static, 'chart_stats.json'), 'w', encoding='utf-8') as f:
+                    await f.write(json.dumps(stats, ensure_ascii=False, indent=4))
+                print('统计数据更新完成')
+                text = text + '统计数据更新完成\n'
+    except Exception:
+        text = text + '统计数据更新失败'
+        print(f"Error:{traceback.format_exc()}")
+    return text
+
+
+
 async def get_music_alias_list() -> AliasList:
     if upper(update_channel) == 'XRAY':
         data = await get_xray_alias()
@@ -390,6 +433,14 @@ async def get_local_music_list() -> MusicList:
 async def get_local_music_alias_list() -> AliasList:
     async with aiofiles.open(os.path.join(static, 'all_alias.json'), 'r', encoding='utf-8') as f:
         data = json.loads(await f.read())
+    async with aiofiles.open(os.path.join(static, 'custom_add_alias.json'), 'r', encoding='utf-8') as f1:
+        custom_data = json.loads(await f1.read())
+    alias_modify_count = 0
+    for keys in custom_data:
+        if keys in data:
+            data[keys]['Alias'] = list(set(data[keys]['Alias'] + custom_data[keys]['Alias']))
+            alias_modify_count += 1
+    print(f'[本地别名库] 已为{alias_modify_count}个曲目增加了别名.')
     total_alias_list = AliasList(data)
     for _ in range(len(total_alias_list)):
         total_alias_list[_] = Alias(ID=total_alias_list[_], Name=data[total_alias_list[_]]['Name'], Alias=data[total_alias_list[_]]['Alias'])
