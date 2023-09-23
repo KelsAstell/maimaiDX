@@ -130,7 +130,7 @@ async def best_50(user):
         for records in ra_list:
             if records['ra'] > int(rating):
                 rank += 1
-        rank_percent = round((rank / len(ra_list)) * 100, 2)
+        rank_percent = round(100 -(rank / len(ra_list)) * 100, 2)
         # pic.show()
         new_size = (round(pic.width * 0.75), round(pic.height * 0.75))
         pic = pic.resize(new_size)
@@ -255,7 +255,7 @@ async def music_info(msg: Message, args: str = '', at: str = ''):
         CardMessage(
             Card(
                 Module.Header(f'单曲游玩数据 - {data["song_name"]}'),
-                Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.\n点击 [展开更多] 查看该歌曲的别名.'),
+                Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.\n点击 [展开全部] 查看该歌曲的别名.'),
                 Module.Divider(),
                 Module.Container(Element.Image(data['url'])),
                 Module.Divider(),
