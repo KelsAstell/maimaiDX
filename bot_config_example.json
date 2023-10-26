@@ -1,0 +1,9 @@
+{
+  "token": "",
+  "market_uuid": "",
+  "kook_channel_id": {"blacklist": []},
+  "kook_id": {"blacklist": []},
+  "user": {"blacklist": ["testtoolman"]},
+  "df-token": "",
+  "qq": {"blacklist": [2533019423]}
+}

@@ -10,13 +10,6 @@ from khl.card import CardMessage, Card, Module, Element, Types
 from khl.command import Rule
 
 import functions.config
-# from functions.api import get_player_data, botmarket_online
-# from functions.best_50 import UserInfo, DrawBest
-# from functions.bind import check_bind, bind_qq, set_username, check_perm, ban_reason
-# from functions.alias_utils import updateAlias, su_batch_add_alias, merge_remote_alias, kohd, su_add_new
-# from functions.config import BOTNAME
-# from functions.info import music_play_data, name_linked, rating_ranking_data, rating_pk, draw_music_info, \
-#     solips_play_data
 from functions.bind import *
 from functions.alias_utils import *
 from functions.info import *
@@ -72,7 +65,7 @@ async def prepare_gif(pic):
     return await bot.client.create_asset(io.BytesIO(imgByteArr.getvalue()))
 
 
-async def info(qqid, args):
+async def info(qqid, args, is_dev):
     payload = {}
     song_alias = []
     if isinstance(qqid, int):
@@ -96,7 +89,13 @@ async def info(qqid, args):
             song_id = str(query[0].ID)
             song_alias = mai.total_alias_list.from_id(song_id)[0]
             random.shuffle(song_alias)
-    play_data = await music_play_data(payload, song_id)
+    if is_dev:
+        if isinstance(qqid, int):
+            play_data = await music_play_data_dev(qqid, song_id)
+        else:
+            return "内测版游玩数据不支持玩家名查询..."
+    else:
+        play_data = await music_play_data(payload, song_id)
     pic = play_data["msg"]
     # pic.show()
     img_url = await prepare_image(pic)
@@ -130,7 +129,7 @@ async def best_50(user):
         for records in ra_list:
             if records['ra'] > int(rating):
                 rank += 1
-        rank_percent = round(100 -(rank / len(ra_list)) * 100, 2)
+        rank_percent = round(100 - (rank / len(ra_list)) * 100, 2)
         # pic.show()
         new_size = (round(pic.width * 0.75), round(pic.height * 0.75))
         pic = pic.resize(new_size)
@@ -186,13 +185,13 @@ async def cbind(msg: Message, args: str = ''):
 @bot.command(name='ib50', aliases=['b50', 'best50', 'best40', 'b40'], case_sensitive=False)
 async def b50(msg: Message, args: str = ''):
     start_time = time.perf_counter()
+    has_at = False
     if msg.extra['mention']:
         qqid = await check_bind(msg.extra['mention'][0])
-        # await msg.reply(f"kookID{msg.extra['mention'][0]}查询了{qqid}.")
-        # return None
+        has_at = True
     else:
         qqid = await check_bind(msg.author_id)
-    if args and not qqid:
+    if args and not has_at:
         if args.lower() in bot_config['user']['blacklist']:
             await msg.reply(
                 CardMessage(
@@ -237,7 +236,50 @@ async def music_info(msg: Message, args: str = '', at: str = ''):
         qqid = await check_bind(msg.author_id)
     if args:
         if qqid:
-            data = await info(qqid, args)
+            data = await info(qqid, args, True)
+        else:
+            await msg.reply(NOT_BIND)
+            return None
+    else:
+        await msg.reply("抓抓呆毛, " + random.choice(
+            ['你要查啥?', '你要查什么', '你要查what?']) + "\n命令格式：info <歌曲名/id/别名>")
+        return None
+    if isinstance(data, str):
+        await msg.reply(data)
+        Log.info(f'[MusicInfo] {msg.author.nickname} 生成了单曲数据, 但{data}.')
+        return None
+    alias_text = "该曲目的其他别名有:\n" + ' / '.join(str(element) for element in data['alias'])
+    if len(alias_text) > 5:
+        alias_text += f" 等{len(alias_text)}个别名."
+    else:
+        alias_text += "."
+    eclipsed_time = time.perf_counter() - start_time
+    await msg.reply(
+        CardMessage(
+            Card(
+                Module.Header(f'单曲游玩数据 - {data["song_name"]}'),
+                Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.\n点击 [展开全部] 查看该歌曲的别名.'),
+                Module.Divider(),
+                Module.Container(Element.Image(data['url'])),
+                Module.Divider(),
+                Module.Context(Element.Text(alias_text)), color='#40E0D0'
+            )))
+    Log.info(f'[MusicInfo] {msg.author.nickname} 生成了单曲数据, 耗时{eclipsed_time:.3f}秒')
+    if data['sss']:
+        await asyncio.sleep(3)
+        await msg.reply(f"我超, {data['comment']}!")
+
+
+@bot.command(name='dinfo', aliases=['dminfo'], case_sensitive=False)
+async def music_info(msg: Message, args: str = '', at: str = ''):
+    start_time = time.perf_counter()
+    if msg.extra['mention']:
+        qqid = await check_bind(msg.extra['mention'][0])
+    else:
+        qqid = await check_bind(msg.author_id)
+    if args:
+        if qqid:
+            data = await info(qqid, args, True)
         else:
             await msg.reply(NOT_BIND)
             return None
@@ -254,14 +296,14 @@ async def music_info(msg: Message, args: str = '', at: str = ''):
     await msg.reply(
         CardMessage(
             Card(
-                Module.Header(f'单曲游玩数据 - {data["song_name"]}'),
+                Module.Header(f'[内测版]单曲数据 - {data["song_name"]}'),
                 Module.Context(f'由{BOTNAME}在{eclipsed_time:.3f}秒内生成.\n点击 [展开全部] 查看该歌曲的别名.'),
                 Module.Divider(),
                 Module.Container(Element.Image(data['url'])),
                 Module.Divider(),
                 Module.Context(Element.Text("该曲目的其他别名有:\n" + alias_text + " 等")), color='#40E0D0'
             )))
-    Log.info(f'[MusicInfo] {msg.author.nickname} 生成了单曲数据, 耗时{eclipsed_time:.3f}秒')
+    Log.info(f'[MusicInfo] {msg.author.nickname} 生成了[内测版]单曲数据, 耗时{eclipsed_time:.3f}秒')
     if data['sss']:
         await asyncio.sleep(3)
         await msg.reply(f"我超, {data['comment']}!")

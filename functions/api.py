@@ -11,8 +11,13 @@ from .log_utils import Log
 
 player_error = '''未找到此玩家，请确保此玩家的用户名和查分器中的用户名相同。'''
 
-maimaiapi = 'https://www.diving-fish.com/api/maimaidxprober'
+with open(os.path.join(os.path.dirname(os.path.dirname(__file__)),'bot_config.json'), 'r', encoding='utf-8') as f:
+    bot_config = json.load(f)
 
+maimaiapi = 'https://www.diving-fish.com/api/maimaidxprober'
+DEV_HEADERS_DF = {
+    'Developer-Token':bot_config['df-token']
+}
 
 async def download_music_pictrue(id: Union[int, str]):
     try:
@@ -32,7 +37,7 @@ async def download_music_pictrue(id: Union[int, str]):
 
 async def get_music_alias(api: str, params: dict = None):
     try:
-        async with aiohttp.request('GET', f'https://api.yuzuai.xyz/maimaidx/MaimaiDXAlias', params=params,
+        async with aiohttp.request('GET', f'https://api.yuzuai.xyz/maimaidx/maimaidxalias', params=params,
                                    timeout=aiohttp.ClientTimeout(total=30)) as resp:
             if resp.status == 400:
                 data = '参数输入错误'
@@ -58,9 +63,6 @@ async def botmarket_online():
 
 
 async def get_player_data(project: str, payload: dict):
-    # with open(os.path.join(temp_path, 'best_50.json'), 'r', encoding='utf-8') as fp:
-    #     b50 = json.load(fp)
-    # return {'success': True, 'data': b50}
     success = False
     if project == 'best':
         p = 'player'
@@ -86,6 +88,29 @@ async def get_player_data(project: str, payload: dict):
                     json_str = json.dumps(name_list, indent=4, ensure_ascii=False)
                     with open(os.path.join(static, 'qq_name_list.json'), 'w', encoding='utf-8') as json_file:
                         json_file.write(json_str)
+            else:
+                data = '未知错误，请联系BOT管理员'
+    except Exception as e:
+        print(f"Error:{traceback.format_exc()}")
+        data = f'获取玩家数据时发生错误，请联系艾斯: {type(e)}'
+    return {'success': success, 'data': data}
+
+
+async def get_player_data_dev(qqid, username: str = None):
+    params = {}
+    if qqid:
+        params['qq'] = qqid
+    if username:
+        params['username'] = username
+    try:
+        async with aiohttp.request('GET', f'{maimaiapi}/dev/player/records', headers=DEV_HEADERS_DF, params=params) as resp:
+            if resp.status == 400:
+                data = player_error
+            elif resp.status == 403:
+                data = '该用户不想让你看TA的游戏记录。'
+            elif resp.status == 200:
+                success = True
+                data = await resp.json()
             else:
                 data = '未知错误，请联系BOT管理员'
     except Exception as e:
